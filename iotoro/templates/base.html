@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Django project</title>
+
+    {% load static %}
+
+    {% block css %}
+    {% endblock %}
+
+    <!-- CSS only -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+
+</head>
+<body class="bg-primary">
+    
+    <div class="content-wrapper">
+
+        <nav class="navbar navbar-expand-lg navbar-light bg-secondary">
+            <div class="container-fluid">
+                <a class="navbar-brand fg-primary" href="{% url 'index' %}">home</a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse justify-content-end" id="navbarContent">
+                <div class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <a class="nav-link fg-primary" href="{% url 'logout' %}">logout</a>
+                    {% else %}
+                        <a class="nav-link fg-primary" href="{% url 'login' %}">login</a>
+                    {% endif %}
+                </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="content container-fluid">
+            {% block content %}
+
+            {% endblock %}
+        </div>
+
+    </div>
+
+
+    <footer class="d-flex justify-content-center">
+        <a class="link fg-primary" href="#">github</a>
+        <p class="fg-primary">Cool copyright © <span id="year"></span></p>
+        <a class="link fg-primary" href="https://mrhookv.com/contact">contact</a>
+    </footer>
+
+
+<!-- JavaScript Bundle with Popper -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js" integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" crossorigin="anonymous"></script>
+
+    <script>
+        $('#year').html(new Date().getFullYear());
+    </script>
+
+</body>
+</html>
+
