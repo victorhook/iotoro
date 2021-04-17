@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Device
+{% endblock %}
+
+{% load static %}
+
+{% block css %}
+    <link rel="stylesheet" href="{% static 'css/device.css' %}">
+{% endblock %}
+
+{% block content %}
+
+    <div id="device-select" class="offset-1 d-flex mt-5">
+
+        <label class="fg-primary" for="device">Current device</label>
+        <input type="text" id="device" placeholder="None selected" readonly>
+
+        <div class="dropdown">
+            <a class="dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                Devices
+            </a>
+            
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#">Action</a></li>
+                <li><a class="dropdown-item" href="#">Action</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="mt-5">
+        <ul class="nav nav-tabs offset-1 col-10">
+            <li class="nav-item">
+                <a class="nav-link" href="#">Data</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">Attributes</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">Settings</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">Triggers</a>
+            </li>
+        </ul>
+    </div>
+
+{% endblock %}
