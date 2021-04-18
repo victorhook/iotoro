@@ -18,6 +18,12 @@ class Device(models.Model):
     token = models.CharField(max_length=64, default=default_token)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'user'], 
+                                    name='unique devicename')
+        ]
+
     def __str__(self):
         return self.name
 
