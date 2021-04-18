@@ -15,3 +15,7 @@ label {
 label, input[type=text], select {
     font-size: 1.5em;
 }
+
+.nav-tabs .active {
+    background-color: #385c8f !important;
+}
