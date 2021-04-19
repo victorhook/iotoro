@@ -1,9 +1,29 @@
 from django.db import models
 from django.contrib.auth.models import User
-# Create your models here.
+from django.core.validators import RegexValidator
+from django.conf import settings
 
-def default_token():
-    return 'asd'
+from iotoro import crypto_utils
+
+
+def get_length_validator(length: int) -> RegexValidator:
+    return RegexValidator(regex='^.{%s}' % length, 
+                          message=f'Length has to be {length}',
+                          code='nomatch')
+
+def get_default_id() -> str:
+    """ Wrapper around utils default id, to ensure that NO other model
+        has the same id.
+    """
+    found_id = False
+    while not found_id:
+        try:
+            id = crypto_utils.get_default_id()
+            found_id = True
+        except Device.DoesNotExist:
+            pass
+    return id
+
 
 class DeviceType(models.Model):
     name = models.CharField(max_length=100)
@@ -15,8 +35,17 @@ class DeviceType(models.Model):
 class Device(models.Model):
     name = models.CharField(max_length=32)
     type = models.ForeignKey(DeviceType, on_delete=models.CASCADE)
-    token = models.CharField(max_length=64, default=default_token)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    device_id = models.CharField(validators=[get_length_validator(
+                                                settings.DEVICE_ID_SIZE*2)],
+                                   default=get_default_id,
+                                   max_length=settings.DEVICE_ID_SIZE*2)
+
+    device_key = models.CharField(validators=[get_length_validator(
+                                                settings.DEVICE_KEY_SIZE*2)],
+                                    default=crypto_utils.get_default_key,
+                                    max_length=settings.DEVICE_KEY_SIZE*2)
 
     class Meta:
         constraints = [
