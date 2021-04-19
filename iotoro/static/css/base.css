@@ -4,6 +4,7 @@ body {
     flex-direction: column;
     justify-content: space-between;
     overflow-x: hidden;
+    color: white;
 }
 
 .fg-primary {
@@ -81,12 +82,4 @@ footer p {
 .sidebar-link:hover {
     background-color: #31445f;
     color:rgb(230, 234, 251);
-}
-
-.nav-link:hover,
-.nav-link::before,
-.nav-link::after {
-    border: none;
-    box-shadow: none;
-    box-sizing: unset;
 }
