@@ -7,9 +7,10 @@ from iotoro import crypto_utils
 
 
 def get_length_validator(length: int) -> RegexValidator:
-    return RegexValidator(regex='^.{%s}' % length, 
+    return RegexValidator(regex='^.{%s}' % length,
                           message=f'Length has to be {length}',
                           code='nomatch')
+
 
 def get_default_id() -> str:
     """ Wrapper around utils default id, to ensure that NO other model
@@ -19,9 +20,21 @@ def get_default_id() -> str:
     while not found_id:
         try:
             id = crypto_utils.get_default_id()
-            found_id = True
+            Device.objects.get(device_id=id)
+
         except Device.DoesNotExist:
-            pass
+            # If no device with the given id can be found, we know it's unique.
+            # However, the md5 can still collide with any other device_id.
+            # While being VERY unlikely, we'll ensure that this won't happen.
+            md5_id_collision = filter(
+                lambda device: crypto_utils.md5(device.device_id) ==
+                               crypto_utils.md5(id),     # noqa
+                Device.objects.all()
+            )
+
+            if len(list(md5_id_collision)) == 0:
+                found_id = True
+
     return id
 
 
@@ -39,13 +52,13 @@ class Device(models.Model):
 
     device_id = models.CharField(validators=[get_length_validator(
                                                 settings.DEVICE_ID_SIZE*2)],
-                                   default=get_default_id,
-                                   max_length=settings.DEVICE_ID_SIZE*2)
+                                 default=get_default_id,
+                                 max_length=settings.DEVICE_ID_SIZE*2)
 
     device_key = models.CharField(validators=[get_length_validator(
                                                 settings.DEVICE_KEY_SIZE*2)],
-                                    default=crypto_utils.get_default_key,
-                                    max_length=settings.DEVICE_KEY_SIZE*2)
+                                  default=crypto_utils.get_default_key,
+                                  max_length=settings.DEVICE_KEY_SIZE*2)
 
     class Meta:
         constraints = [
@@ -64,3 +77,4 @@ class Param(models.Model):
 class Attribute(models.Model):
     device = models.ForeignKey(Device, on_delete=models.CASCADE)
     param = models.ForeignKey(Param, on_delete=models.CASCADE)
+    
