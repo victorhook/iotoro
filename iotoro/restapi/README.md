@@ -2,8 +2,8 @@
 
 There are different types of messages:
 - Ping / Pong
-- Push upstream
-- Push downstream
+- Write upstream
+- Write downstream
 - Read upstream
 - Read downstream
 
@@ -27,9 +27,9 @@ There are different types of messages:
 - Action: PING
 - Content: []
 
-#### Push upstream
+#### Write upstream
 - Version: X
-- Action: PUSH_UP
+- Action: WRITE_UP
 - Content: [XXX]
 
 #### Read upstream
@@ -44,12 +44,12 @@ There are different types of messages:
 - Action: PONG
 - Content: []
 
-#### Push downstream
+#### Write downstream
 - Version: X
-- Action: PUSH_DOWN
+- Action: WRITE_DOWN
 - Content: [XXX]
 
-#### Push downstream
+#### WRITE downstream
 - Version: X
 - Action: READ_DOWN
 - Content: [XXX]
