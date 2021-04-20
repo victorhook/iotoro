@@ -14,8 +14,12 @@
         <td>{{ selected_device.name }}</td>
     </tr>
     <tr>
-        <td>Last received sent</td>
-        <td>STUFF</td>
+        <td>Last received packet</td>
+        {% if latest_packet is not None %}
+            <td>{{ latest_packet.time_diff }} seconds ago</td>
+        {% else %}
+            <td>No packets received</td>
+        {% endif %}
     </tr>
     <tr>
         <td>Total data sent</td>
@@ -61,10 +65,8 @@
             }]
         },
         options: {
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
+            animation: {
+                duration: 0
             }
         }
     });

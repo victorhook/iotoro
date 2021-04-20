@@ -1,8 +1,8 @@
+from datetime import timedelta, datetime
 from django.shortcuts import render, redirect
+from django.utils import timezone
 from django.http import HttpRequest
 from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
-from django.views.generic.base import TemplateView
 
 
 from . import models
@@ -20,7 +20,7 @@ def new_device(request: HttpRequest):
             return redirect('device')
         else:
             #TODO: Handle error here?
-            pass        
+            return render(request, 'new_device.html', {'form': device_form})
     else:
         device_form = utils.get_device_form()
         return render(request, 'new_device.html', {'form': device_form})
@@ -39,7 +39,7 @@ def device(request: HttpRequest):
 
 @login_required
 def base_device_view(request: HttpRequest, endpoint: str, 
-                    selected_device: str, data: dict):
+                     selected_device: str, data: dict):
     devices = utils.get_devices(request.user)
     selected_device = utils.get_device(request.user, selected_device)
 
@@ -77,6 +77,23 @@ def settings(request: HttpRequest, device_name: str):
 
 def triggers(request: HttpRequest, device_name: str):
     return base_device_view(request, 'triggers.html', device_name, {})
-def overview(request: HttpRequest, device_name: str):
-    return base_device_view(request, 'overview.html', device_name, {})
 
+
+def get_time_diff(t1: timezone, t2: timezone) -> str:
+    return (t1 - t2).seconds
+
+
+@login_required
+def overview(request: HttpRequest, device_name: str):
+    device = utils.get_device(request.user, device_name)
+    latest_packet = utils.get_latest_packet(device)
+
+    if latest_packet is not None:
+        latest_packet.time_diff = get_time_diff(timezone.now(),
+                                                latest_packet.timestamp)
+
+    total_data = utils.get_total_data_send(device)
+    print(total_data)
+
+    return base_device_view(request, 'overview.html', device_name,
+                            {'latest_packet': latest_packet})

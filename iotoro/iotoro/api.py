@@ -4,11 +4,22 @@ import struct
 
 class Action:
     PING = 1
-    PUSH_UP = 2
-    PUSH_DOWN = 3
+    WRITE_UP = 2
+    WRITE_DOWN = 3
     PONG = 4
     READ_UP = 5
     READ_DOWN = 6
+
+
+def get_action_choices() -> list:
+    return [
+        ('Pi', 'PING'),
+        ('Wu', 'WRITE_UP'),
+        ('Wd', 'WRITE_DOWN'),
+        ('Po', 'PONG'),
+        ('Ru', 'READ_UP'),
+        ('Rd', 'READ_DOWN'),
+    ]
 
 
 @dataclass

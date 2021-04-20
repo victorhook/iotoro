@@ -73,20 +73,37 @@
         </div>
     </div>
 
+    <button id="test">TEST</button>
+
 {% endblock %}
 
 {% block js %}
     <script>
-        let url = window.location.href.split('/');
-        let endpoint = url[url.length-2];
-        let selected = $(`#${endpoint}`);
+        var locationUrl = window.location.href.split('/');
+        var endpoint = locationUrl[locationUrl.length-2];
+        var deviceName = locationUrl[locationUrl.length-1];
+        var selected = $(`#${endpoint}`);
         selected.addClass('active');
 
+        var urlEndpoint = `/device/${endpoint}/`;
+
         $('#device-select').on('input', e => {
-            let newEndpoint = `/device/${endpoint}/` + e.target.value;
+            let newEndpoint = urlEndpoint + e.target.value;
             window.location.href = newEndpoint;
         })
 
+        // Synch content with backend every second.
+        /*
+        setInterval(() => {
+            $.ajax({
+                type: 'GET',
+                url: urlEndpoint + deviceName,
+                success: function(data){
+                    $('#web-content').html(data);
+                }
+            });
+        }, 2000);
+        */
     </script>
 
     {% block device_js %}

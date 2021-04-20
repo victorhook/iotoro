@@ -20,6 +20,7 @@
 
             {% for field in form %}
                 <label id="{{ field.id_for_label }}">{{ field.label }}</label>
+                
                 {% if field.widget_type == 'select' %}
                     <select class="form-select" aria-label="Default select example" name="{{ field.name }}">
                         {% for widget in field.subwidgets %}
@@ -29,6 +30,14 @@
                 {% elif field.widget_type == 'text' %}
                     <input type="text" class="fg-primary" name="{{ field.name }}" id="{{ field.id }}" value="{{ field.value }}">
                 {% endif %}
+
+                <!-- Check if there's an error in the field! Not most efficient way to do it, but works -->
+                {% for err in form.errors.items %}
+                    {% if field.name == err.0 %}
+                        <p>{{ err.1 }}</p>
+                    {% endif %}
+                {% endfor %}
+
             {% endfor %}
 
             <div class="button-container">
