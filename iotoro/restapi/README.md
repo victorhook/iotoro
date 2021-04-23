@@ -13,10 +13,12 @@ There are different types of messages:
 |------|-------------|-----------------------|
 | Data | device_id   | initialization_vector |
 
-### Data format:
-|  0 - 3  | 4 - 7  | 8 - *   |
-|---------|--------|---------|
-| Version | Action | Content |
+### Data
+|  0 - 3  | 4 - 7  |    8-23     |  24 - *   |
+|---------|--------|-------------|-----------|
+| Version | Action | Payload len |  Content  |
+
+#### Content
 
 ## Messages
 
@@ -30,7 +32,7 @@ There are different types of messages:
 #### Write upstream
 - Version: X
 - Action: WRITE_UP
-- Content: [XXX]
+- Content: [`{key: value}`]
 
 #### Read upstream
 - Version: X
