@@ -1,17 +1,21 @@
 #include "iotoro.h"
-#include "iotoro_protocol.h"
 #include "AES.h"
 
+#define string std::string
 
 
-const char* API_IP = IOTORO_API_URL;
-const char* API_URL = IOTORO_API_URL;
-const uint16_t API_PORT = IOTORO_API_PORT;
+
+/* -- Connection -- */
+
+IotoroConnection::IotoroConnection()
+{
+    char url[] = IOTORO_API_URL;
+    strcpy(hostIp, url);
+    hostPort = IOTORO_API_PORT;
+}
 
 
-IotoroConnection::IotoroConnection(const char* hostIp, const uint16_t hostPort)
-    : hostIp(hostIp), hostPort(hostPort)
-{}
+/* -- Client -- */
 
 IotoroClient::IotoroClient(const char* deviceId, const char* deviceKey)
  : IotoroClient(deviceId, deviceKey, AUOMATIC)
@@ -19,42 +23,18 @@ IotoroClient::IotoroClient(const char* deviceId, const char* deviceKey)
 
 IotoroClient::IotoroClient(const char* deviceId, const char* deviceKey,
                            OPERATION_MODE mode)
- : deviceId(deviceId), deviceKey(deviceKey), mode(mode),
-   connection(API_IP, API_PORT),
-   _httpHeaders("POST /API/ HTTP/1.1\r\n Content-Type: application/x-www-form-urlencoded\r\n")
+ : deviceId(deviceId), deviceKey(deviceKey), mode(mode)
 {}
-
-
-void IotoroClient::makeHttpPacket(iotoroPacket& body)
-{
-    /*
-    std::string len = std::string("Content-Length: ") + std::to_string(body.size) + std::string("\r\n");
-    _httpHeaders.reserve(len.size());
-    _httpPacket.body = body;
-    _httpPacket.header = _httpHeaders;
-    */
-}
-
-void IotoroClient::makeIotoroPacket(const IOTORO_ACTION action, const uint16_t size, 
-                                    const char* data)
-{
-    /*
-    _iotoroPacket.version = IOTORO_VERSION;
-    _iotoroPacket.action = action;
-    _iotoroPacket.size = size;
-    _iotoroPacket.data = data;
-    */
-}
 
 
 int IotoroClient::start()
 {
-    return connection.connect();
+    return connection->doConnect();
 }
 
 int IotoroClient::stop()
 {
-    return connection.disconnect();
+    return connection->doDisconnect();
 }
 
 int IotoroClient::ping()
@@ -77,14 +57,7 @@ void IotoroClient::setParam(const char name[IOTORO_PARAM_MAX_NAME_SIZE], int8_t*
 void IotoroClient::setParam(const char name[IOTORO_PARAM_MAX_NAME_SIZE], PARAM_TYPE type)
 {
     Param* param = &params[paramsSet];
-
-    // Copy the name into param-name buffer.
-    for (uint8_t i = 0; i < IOTORO_PARAM_MAX_NAME_SIZE; i++) {
-        if (!name[i])
-            break;
-        param->name[i] = name[i];
-    }
-
+    strcpy(param->name, name);
     param->type = type;
     paramsSet++;
 }
@@ -117,4 +90,92 @@ uint16_t IotoroClient::getPingFrequency()
 OPERATION_MODE IotoroClient::getOperationMode()
 {
     return mode;
+}
+
+
+/* -- Private -- */
+void IotoroClient::setHttpHeaders(uint16_t httpPayloadSize)
+{
+    string headers = string(IOTORO_API_METHOD) + string(" ") + string(IOTORO_API_ENDPOINT) + string(" HTTP/1.1\r\n")
+                     + string("Content-Type: application/x-www-form-urlencoded\r\n")
+                     + string("Content-Length: ") + std::to_string(httpPayloadSize) 
+                     + string("\r\n\r\n");      // Seperate headers from the data.
+    _httpHeaderSize = headers.size();
+    memset(_httpHeaders, 0, IOTORO_MAX_HTTP_HEADER_SIZE);
+    strcpy(_httpHeaders, headers.c_str());
+}
+
+void IotoroClient::setIotoroPacket(IOTORO_ACTION action)
+{
+    /**
+         |  0 - 3  | 4 - 7  |    8-23     |  24 - *   |
+         |---------|--------|-------------|-----------|
+         | Version | Action | Payload len |  Content  |
+     */
+    iotoroPacket.version = IOTORO_VERSION;
+    iotoroPacket.action = action;
+    switch (action) {
+        case IOTORO_WRITE_UP:
+            iotoroPacket.payloadSize = getIotoroPacketSize();
+            iotoroPacket.data = (char *) params;
+            break;
+        default:
+            iotoroPacket.payloadSize = 0;
+            break;
+    }
+}
+
+uint16_t IotoroClient::getIotoroPacketPayloadSize() 
+{
+    return (sizeof(Param) * paramsSet);
+}
+
+uint16_t IotoroClient::getIotoroPacketSize() 
+{
+    // Header is always 3. 
+    // 0:   version + action
+    // 1-2: payload length
+    uint16_t size = IOTORO_PACKET_HEADER_SIZE;
+
+    // Append the payload size.
+    size += iotoroPacket.payloadSize;
+
+    return size;
+}
+
+
+
+/* strcopy doesn't work for some reason so need this... */
+static void copyStr(char* to, char* from) {
+    while (*from)
+        *to++ = *from++;
+}
+
+
+void IotoroClient::sendPacket() 
+{ 
+    uint16_t index = _httpHeaderSize;
+
+    // Create a buffer for the packet.
+    uint16_t packetSize = _httpHeaderSize + getIotoroPacketSize();
+    char packet[packetSize];
+
+    // Move the http headers to the packet
+    copyStr(packet, _httpHeaders);
+
+    // Start adding the payload.
+    packet[index++] = iotoroPacket.version << 4 | iotoroPacket.action;
+
+    // Add the payload size to the packet. 
+    // Note that this must be treated as 16-bit word instead of a byte.
+    *(uint16_t* ) (packet + index) = iotoroPacket.payloadSize;
+    
+    // Increment the index.
+    index += 2;
+
+    for (uint16_t i = 0; i < iotoroPacket.payloadSize; i++) {
+        packet[index++] = iotoroPacket.data[i];
+    }
+
+    connection->sendPacket(packet, packetSize);
 }

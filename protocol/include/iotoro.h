@@ -1,18 +1,25 @@
 #ifndef IOTORO_H
 #define IOTORO_H
 
-#include "iotoro_protocol.h"
 
 #include <stdint.h>
 #include <string>
  
-/* --- Defines --- */
-#define IOTORO_API_URL "127.0.0.1"
-#define IOTORO_API_ENDPOINT "/api"
+/* --- Constants --- */
+#define IOTORO_API_URL "localhost"
 #define IOTORO_API_PORT 8000
+
+#define IOTORO_API_METHOD "POST"
+#define IOTORO_API_ENDPOINT "/api"
+#define IOTORO_PACKET_HEADER_SIZE 3
+
+#define IP_ADDR_SIZE 100
+
+/* Configurable */
 #define IOTORO_PARAM_MAX_NAME_SIZE 10
 #define IOTORO_MAX_PARAMETERS 10
-
+#define IOTORO_MAX_HTTP_HEADER_SIZE 150
+#define IOTORO_MAX_PAYLOAD_HEADER_SIZE 1
 
 #define IOTORO_VERSION 1
 
@@ -22,7 +29,15 @@ typedef enum {
     MANUAL
 } OPERATION_MODE;
 
-
+typedef enum {
+    IOTORO_PING = 1,
+    IOTORO_WRITE_UP = 2,
+    IOTORO_WRITE_DOWN = 3,
+    IOTORO_PONG = 4,
+    IOTORO_READ_UP = 5,
+    IOTORO_READ_DOWN = 6
+} IOTORO_ACTION;
+    
 typedef enum {
     PARAM_UINT_8,
     PARAM_INT_8,
@@ -39,32 +54,47 @@ typedef struct {
     ParamPtr paramPtr;
 } Param;
 
+typedef struct {
+    uint8_t version;
+    IOTORO_ACTION action;
+    uint16_t payloadSize;
+    char* data;
+} IotoroPacket;
  
+ 
+
 class IotoroConnection
 {
     protected:
-        const char* hostIp;
-        const uint16_t hostPort;
+        char hostIp[IP_ADDR_SIZE];
+        uint16_t hostPort;
+        bool _isConnected;
+
+        IotoroConnection();
 
     public:
-        IotoroConnection(const char* hostIp, const uint16_t hostPort);
-
         /* Connects to the iotoro server. Returns -1 if error. */
-        virtual int connect() { return 0; }
+        virtual int doConnect() { return 0; }
 
         /* Disconnects to the iotoro server. Returns -1 if error. */
-        virtual int disconnect() { return 0; }
+        virtual int doDisconnect() { return 0; }
 
         /* Sends a packet to the iotoro server. Returns -1 if error. */
-        virtual int sendPacket() { return 0; }
+        virtual int sendPacket(const char* data, uint16_t len) { return 0; }
 
         /* Tries to read a packet and return it. This method blocks. */
         virtual void readPacket() {}
+
+        /* Returns if the connection is connected or not. */
+        bool isConnected() { return _isConnected; }
 };
 
 
 class IotoroClient
 {
+    protected:
+        IotoroConnection* connection;
+
     private:
         const char* deviceId;
         const char* deviceKey;
@@ -75,24 +105,34 @@ class IotoroClient
         uint16_t paramWriteFrequency;
         uint16_t pingFrequency;
 
-        IotoroConnection connection;
 
         //iotoroPacket _iotoroPacket;
-        //httpPacket _httpPacket;
-        std::string _httpHeaders;
+        char _httpHeaders[IOTORO_MAX_HTTP_HEADER_SIZE];
+        uint16_t _httpHeaderSize;
 
+        IotoroPacket iotoroPacket;
+
+        void setIotoroPacket(IOTORO_ACTION action);
+        void setHttpHeaders(uint16_t httpPayloadSize);
+        void setPayloadHeaders(IOTORO_ACTION action);
         void setParam(const char name[IOTORO_PARAM_MAX_NAME_SIZE], PARAM_TYPE type);
-    public:
 
+        void sendPacket();
+
+        uint16_t getIotoroPacketSize();
+        uint16_t getIotoroPacketPayloadSize();
+
+    public:
         IotoroClient(const char* deviceId, const char* deviceKey);
         IotoroClient(const char* deviceId, const char* deviceKey, 
                      OPERATION_MODE mode);
 
 
-        void makeHttpPacket(iotoroPacket& body);
-
-        void makeIotoroPacket(const IOTORO_ACTION action, const uint16_t size, 
-                                    const char* data);
+        void test() {
+            setHttpHeaders(200);
+            setIotoroPacket(IOTORO_PING);
+            sendPacket();
+        }
 
         /* 
             Starts constant communication with the backend server.
