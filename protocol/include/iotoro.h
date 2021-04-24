@@ -4,16 +4,22 @@
 
 #include <stdint.h>
 #include <string>
+#include <iostream>
+
+#include "aes.h"
  
 /* --- Constants --- */
 #define IOTORO_API_URL "localhost"
 #define IOTORO_API_PORT 8000
 
 #define IOTORO_API_METHOD "POST"
-#define IOTORO_API_ENDPOINT "/api"
+#define IOTORO_API_ENDPOINT "/api/"
 #define IOTORO_PACKET_HEADER_SIZE 3
+#define IOTORO_DEVICE_ID_SIZE 8             // In bytes.
+#define IOTORO_DEVICE_KEY_SIZE 16           // In bytes.
 
 #define IP_ADDR_SIZE 100
+#define HTTP_ENDING_CR_BYTES 4 
 
 /* Configurable */
 #define IOTORO_PARAM_MAX_NAME_SIZE 10
@@ -22,6 +28,8 @@
 #define IOTORO_MAX_PAYLOAD_HEADER_SIZE 1
 
 #define IOTORO_VERSION 1
+
+#define DEBUG_LOG(msg) (std::cout << msg)
 
 
 typedef enum {
@@ -61,7 +69,6 @@ typedef struct {
     char* data;
 } IotoroPacket;
  
- 
 
 class IotoroConnection
 {
@@ -72,18 +79,23 @@ class IotoroConnection
 
         IotoroConnection();
 
+        virtual int doWrite(const char* data, uint16_t len) = 0;
+        virtual int doRead() = 0;
+        virtual int doConnect() = 0;
+        virtual int doDisconnect() = 0;
+
     public:
-        /* Connects to the iotoro server. Returns -1 if error. */
-        virtual int doConnect() { return 0; }
-
-        /* Disconnects to the iotoro server. Returns -1 if error. */
-        virtual int doDisconnect() { return 0; }
-
         /* Sends a packet to the iotoro server. Returns -1 if error. */
-        virtual int sendPacket(const char* data, uint16_t len) { return 0; }
+        int sendPacket(const char* data, uint16_t len);
 
         /* Tries to read a packet and return it. This method blocks. */
-        virtual void readPacket() {}
+        int readPacket();
+
+        /* Connects to the iotoro server. Returns -1 if error. */
+        int openConnection();
+
+        /* Disconnects to the iotoro server. Returns -1 if error. */
+        int closeConnection();
 
         /* Returns if the connection is connected or not. */
         bool isConnected() { return _isConnected; }
@@ -96,42 +108,55 @@ class IotoroClient
         IotoroConnection* connection;
 
     private:
-        const char* deviceId;
-        const char* deviceKey;
+        // For authorization and encryption.
+        uint8_t deviceId[IOTORO_DEVICE_ID_SIZE];
+        uint8_t deviceKey[IOTORO_DEVICE_KEY_SIZE];
+        char* deviceIdHexified;
+
+        // AES encryption.
+        char iv[AES_BLOCKLEN];
+        AES_ctx aes;
+
+        // Param settings.
         OPERATION_MODE mode;
         Param params[IOTORO_MAX_PARAMETERS];
         uint8_t paramsSet;
-
         uint16_t paramWriteFrequency;
         uint16_t pingFrequency;
 
-
-        //iotoroPacket _iotoroPacket;
         char _httpHeaders[IOTORO_MAX_HTTP_HEADER_SIZE];
         uint16_t _httpHeaderSize;
 
         IotoroPacket iotoroPacket;
 
+        // Setters & getters helper methods
         void setIotoroPacket(IOTORO_ACTION action);
         void setHttpHeaders(uint16_t httpPayloadSize);
         void setPayloadHeaders(IOTORO_ACTION action);
         void setParam(const char name[IOTORO_PARAM_MAX_NAME_SIZE], PARAM_TYPE type);
-
-        void sendPacket();
-
         uint16_t getIotoroPacketSize();
         uint16_t getIotoroPacketPayloadSize();
+        uint8_t getPadBytesRequired(uint16_t packetSize);
+
+        void sendPacket();
+        void encryptPayload(char* payload, uint16_t start, uint16_t end, uint8_t padBytesRequired);
+
+        /* Generataing initialization vector for AES encryption is port-specific. */
+        virtual void generateIv(char iv[AES_BLOCKLEN]){};
 
     public:
-        IotoroClient(const char* deviceId, const char* deviceKey);
-        IotoroClient(const char* deviceId, const char* deviceKey, 
+        IotoroClient(const char* deviceId, const char* deviceKey, IotoroConnection* con);
+        IotoroClient(const char* deviceId, const char* deviceKey, IotoroConnection* con, 
                      OPERATION_MODE mode);
 
 
         void test() {
-            setHttpHeaders(200);
             setIotoroPacket(IOTORO_PING);
+            setHttpHeaders(getIotoroPacketSize());
+            connection->openConnection();
             sendPacket();
+            connection->readPacket();
+            connection->closeConnection();
         }
 
         /* 

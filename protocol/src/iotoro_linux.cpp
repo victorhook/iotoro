@@ -50,6 +50,8 @@ int IotoroConnectionLinux::doConnect()
         return -1;
     }
 
+    IOTORO_LOG("Connection succesful.");
+
     _isConnected = true;
     return 1;
 }
@@ -68,7 +70,7 @@ int IotoroConnectionLinux::doDisconnect()
     return 1;
 }
 
-int IotoroConnectionLinux::sendPacket(const char* data, uint16_t len)
+int IotoroConnectionLinux::doWrite(const char* data, uint16_t len)
 {
     int res = write(sockfd, data, len);
     if (res < 0) {
@@ -77,14 +79,14 @@ int IotoroConnectionLinux::sendPacket(const char* data, uint16_t len)
     return len - res;
 }
 
-void IotoroConnectionLinux::readPacket()
+int IotoroConnectionLinux::doRead()
 {
-    char buf[100];
-    bzero(buf, 11);
-    read(sockfd, buf, 10);
+    char buf[1024];
+    bzero(buf, 1024);
+    read(sockfd, buf, 1024);
     std::cout << buf << std::endl;
+    return 1;
 }
-
 
 IotoroConnectionLinux::IotoroConnectionLinux()
 {
@@ -94,20 +96,22 @@ IotoroConnectionLinux::IotoroConnectionLinux()
     hostPort = IOTORO_API_PORT;
 }
 
-// Create a connection object.
-IotoroConnection con = IotoroConnectionLinux();
-
+// Create an instance of the connection.
+IotoroConnection* iotoroLinuxCon = new IotoroConnectionLinux();
 
 /* -- Client -- */
 
 IotoroClientLinux::IotoroClientLinux(const char* deviceId, const char* deviceKey)
-    : IotoroClient(deviceId, deviceKey)
-{
-    connection = &con;
-}
+    : IotoroClient(deviceId, deviceKey, iotoroLinuxCon)
+{}
+
 IotoroClientLinux::IotoroClientLinux(const char* deviceId, const char* deviceKey, 
                                      OPERATION_MODE mode)
-    : IotoroClient(deviceId, deviceKey, mode)
+    : IotoroClient(deviceId, deviceKey, iotoroLinuxCon, mode)
+{}
+
+void IotoroClientLinux::generateIv(char iv[AES_BLOCKLEN])
 {
-    connection = &con;
-} 
+    for(uint8_t i = 0; i < AES_BLOCKLEN; i++)
+        iv[i] = rand() % 256;
+}
