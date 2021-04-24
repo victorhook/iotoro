@@ -8,7 +8,7 @@ OBJ = $(patsubst $(OBJ_DIR)/%.o,%$(SRC_DIR)%.cpp,$(SRC))
 DEPS = $(wildcard $(INCLUDES)/*.h)
 
 CC = g++
-CFLAGS = -I $(INCLUDES) -g -Wall
+CFLAGS = -I $(INCLUDES) -g -Wno-reorder
 
 TARGET = iotoro
 
