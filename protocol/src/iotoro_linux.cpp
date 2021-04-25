@@ -110,7 +110,7 @@ IotoroClientLinux::IotoroClientLinux(const char* deviceId, const char* deviceKey
     : IotoroClient(deviceId, deviceKey, iotoroLinuxCon, mode)
 {}
 
-void IotoroClientLinux::generateIv(char iv[AES_BLOCKLEN])
+void IotoroClientLinux::generateIv(uint8_t iv[AES_BLOCKLEN])
 {
     for(uint8_t i = 0; i < AES_BLOCKLEN; i++)
         iv[i] = rand() % 256;

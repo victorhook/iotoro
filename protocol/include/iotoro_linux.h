@@ -51,7 +51,7 @@ class IotoroConnectionLinux: public IotoroConnection
 class IotoroClientLinux: IotoroClient
 {
     private:
-        virtual void generateIv(char iv[AES_BLOCKLEN]);
+        virtual void generateIv(uint8_t iv[AES_BLOCKLEN]);
 
     public:
         IotoroClientLinux(const char* deviceId, const char* deviceKey);
