@@ -1,3 +1,8 @@
+/*
+  This file is taken from https://github.com/kokke/tiny-AES-c/blob/master/aes.c
+  which deserves all the credit for it.
+*/
+
 #ifndef _AES_H_
 #define _AES_H_
 
