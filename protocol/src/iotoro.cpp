@@ -41,7 +41,7 @@ static inline void unHexifly(const char* from, char* to, size_t len)
 {
     size_t i = 0, j = 0;
     while (i < len) {
-        to[i] = getAsciiValue(from[j]) * 16 + getAsciiValue(from[j]);
+        to[i] = getAsciiValue(from[j]) * 16 + getAsciiValue(from[j + 1]);
         j += 2;
         i++;
     }
@@ -136,7 +136,6 @@ int IotoroConnection::closeConnection()
 
 
 
-
 /* -- Client -- */
 
 IotoroClient::IotoroClient(const char* deviceId, const char* deviceKey, IotoroConnection* con)
@@ -148,9 +147,8 @@ IotoroClient::IotoroClient(const char* deviceId, const char* deviceKey, IotoroCo
  : deviceIdHexified((char*) deviceId), connection(con), mode(mode)
 {
     unHexifly(deviceId, (char*) this->deviceId, IOTORO_DEVICE_ID_SIZE);
-    unHexifly(deviceKey, (char*) this->deviceKey, IOTORO_DEVICE_ID_SIZE);
+    unHexifly(deviceKey, (char*) this->deviceKey, IOTORO_DEVICE_KEY_SIZE);
 }
-
 
 int IotoroClient::start()
 {
@@ -218,8 +216,17 @@ OPERATION_MODE IotoroClient::getOperationMode()
 }
 
 
+uint16_t IotoroClient::getPayloadSize()
+{
+    return IOTORO_PACKET_HEADER_SIZE
+            + iotoroPacket.dataSize
+            + IOTORO_DEVICE_ID_SIZE
+            + getPadBytesRequired()
+            + AES_IV_SIZE;
+}
+
 /* -- Private -- */
-void IotoroClient::setHttpHeaders(uint16_t httpPayloadSize)
+void IotoroClient::setHttpHeaders()
 {
     // Calculate the md5sum of the device id before putting it into the endpoint URL.
     char deviceIdMd5sum[IOTORO_DEVICE_ID_SIZE_HEX];
@@ -231,18 +238,17 @@ void IotoroClient::setHttpHeaders(uint16_t httpPayloadSize)
     // Hexifly the md5sum of the result so it's string-friendly.
     hexifly((const char*) deviceIdMd5sum, deviceIdM5dsumHexified, 16);
 
-
     string endpoint = string(IOTORO_API_ENDPOINT) + string(deviceIdM5dsumHexified, 32) + string("/");
     string headers = string(IOTORO_API_METHOD) + string(" ") + endpoint  + string(" HTTP/1.1\r\n")
                      + string("Content-Type: application/x-www-form-urlencoded\r\n")
-                     + string("Content-Length: ") + std::to_string(httpPayloadSize) 
+                     + string("Content-Length: ") + std::to_string(getPayloadSize()) 
                      + string("\r\n\r\n");      // Seperate headers from the data.
     _httpHeaderSize = headers.size();
     memset(_httpHeaders, 0, IOTORO_MAX_HTTP_HEADER_SIZE);
     strcpy(_httpHeaders, headers.c_str());
 }
 
-void IotoroClient::setIotoroPacket(IOTORO_ACTION action)
+void IotoroClient::setIotoroPacket(IOTORO_ACTION action, uint8_t iv[AES_IV_SIZE])
 {
     /**
          |  0 - 3  | 4 - 7  |    8-23     |  24 - *   |
@@ -253,46 +259,36 @@ void IotoroClient::setIotoroPacket(IOTORO_ACTION action)
     iotoroPacket.action = action;
     switch (action) {
         case IOTORO_WRITE_UP:
-            iotoroPacket.payloadSize = getIotoroPacketSize();
-            iotoroPacket.data = (char *) params;
+            iotoroPacket.dataSize = (sizeof(Param) * paramsSet);
+            iotoroPacket.data = (uint8_t *) params;
             break;
         default:
-            iotoroPacket.payloadSize = 0;
+            iotoroPacket.dataSize = 0;
             break;
     }
+    iotoroPacket.iv = iv;
+    iotoroPacket.deviceId = this->deviceId;
 }
 
-uint16_t IotoroClient::getIotoroPacketPayloadSize() 
+
+
+uint8_t IotoroClient::getPadBytesRequired()
 {
-    return (sizeof(Param) * paramsSet);
-}
-
-uint16_t IotoroClient::getIotoroPacketSize() 
-{
-    // Header is always 3. 
-    // 0:   version + action
-    // 1-2: payload length
-    uint16_t size = IOTORO_PACKET_HEADER_SIZE;
-
-    // Append the payload size.
-    size += iotoroPacket.payloadSize;
-
-    // Since deviceId and iv is appended to the packet, add the size of those as well.
-    size += IOTORO_DEVICE_ID_SIZE + AES_IV_SIZE;
-
-    return size;
-}
-
-/* strcopy doesn't work for some reason so need this... */
-static void copyStr(char* to, const char* from) {
-    while (*from)
-        *to++ = *from++;
-}
-
-uint8_t IotoroClient::getPadBytesRequired(uint16_t packetSize)
-{
-    uint8_t remainder = packetSize % AES_BLOCKLEN;
+    // Headers + Payload + Device id needs to be encrypted.
+    uint8_t size = IOTORO_PACKET_HEADER_SIZE + iotoroPacket.dataSize + IOTORO_DEVICE_ID_SIZE;
+    uint8_t remainder = AES_BLOCKLEN % size;
     return remainder == 0 ? AES_BLOCKLEN : remainder;
+}
+
+uint16_t IotoroClient::getTotalPacketSize()
+{
+    return _httpHeaderSize \
+            + IOTORO_PACKET_HEADER_SIZE
+            + iotoroPacket.dataSize
+            + IOTORO_DEVICE_ID_SIZE
+            + getPadBytesRequired()
+            + AES_IV_SIZE
+            + HTTP_ENDING_CR_BYTES;
 }
 
 static inline void addHttpEnding(char* packet)
@@ -303,43 +299,63 @@ static inline void addHttpEnding(char* packet)
     packet[3] = '\n';
 }
 
+int IotoroClient::send(IOTORO_ACTION action)
+{
+    uint8_t iv[AES_BLOCKLEN];
+    generateIv(iv);
+
+    setIotoroPacket(action, iv);
+    setHttpHeaders();
+
+    connection->openConnection();
+    sendPacket();
+    connection->readPacket();
+    connection->closeConnection();
+    return 1;
+}
+
 void IotoroClient::sendPacket() 
 { 
     uint16_t index = _httpHeaderSize;
 
-    // Create a buffer for the packet.
-
     // Before we create a buffer for the packet, we need to know if, and how
     // many bytes of padding we need to add during the encryption.
-    uint16_t payloadSize = getIotoroPacketSize();
-    uint8_t padBytesRequired = getPadBytesRequired(payloadSize);
+    uint16_t padBytesRequired = getPadBytesRequired();
+    uint16_t packetSize = getTotalPacketSize();
 
-    uint16_t packetSize = _httpHeaderSize + payloadSize + padBytesRequired + HTTP_ENDING_CR_BYTES;
+    // Create a buffer for the packet.
     char packet[packetSize];
 
     // Move the http headers to the packet
-    copyStr(packet, _httpHeaders);
+    memcpy(packet, (const char*) _httpHeaders, _httpHeaderSize);
 
     // Start adding the payload.
     packet[index++] = iotoroPacket.version << 4 | iotoroPacket.action;
 
     // Add the payload size to the packet. 
     // Note that this must be treated as 16-bit word instead of a byte.
-    *(uint16_t* ) (packet + index) = iotoroPacket.payloadSize;
+    *(uint16_t* ) (packet + index) = iotoroPacket.dataSize;
     
     index += 2;
-    for (uint16_t i = 0; i < iotoroPacket.payloadSize; i++) 
+    for (uint16_t i = 0; i < iotoroPacket.dataSize; i++) 
         packet[index++] = iotoroPacket.data[i];
 
     // Append the device id to the data.
     memcpy(packet + index, deviceId, IOTORO_DEVICE_ID_SIZE);
     index += IOTORO_DEVICE_ID_SIZE;
 
+    printf("\nIV: ");
+    printVector((uint8_t *) iotoroPacket.iv);
+    printf("Device Key: ");
+    printVector((uint8_t *) deviceKey);
+
     encryptPayload(packet, _httpHeaderSize, index, padBytesRequired);
     index += padBytesRequired;
 
+    printf("\n\n");
+
     // Finally, add iv to the payload.
-    memcpy(packet + index, iv, AES_IV_SIZE);
+    memcpy(packet + index, iotoroPacket.iv, AES_IV_SIZE);
     index += AES_IV_SIZE;
 
     addHttpEnding(packet + index);
@@ -349,16 +365,26 @@ void IotoroClient::sendPacket()
 
 void IotoroClient::encryptPayload(char* payload, uint16_t start, uint16_t end, uint8_t padBytesRequired)
 {
-    // Generate the initialization vector.
-    generateIv(iv);
-
     // Init the aes algorithm.
-    AES_init_ctx_iv(&aes, (const uint8_t *) deviceKey, (const uint8_t *) iv);
+    AES_init_ctx_iv(&aes, (const uint8_t *) deviceKey, (const uint8_t *) iotoroPacket.iv);
 
     // Pad the data, if needed.
     memset(payload + end, padBytesRequired, padBytesRequired);
 
     // Encrypt the data.
-    //size_t len = (end - start) + padBytesRequired;
-    //AES_CBC_encrypt_buffer(&aes, (uint8_t *) (payload + start), len);
+    size_t len = (end - start) + padBytesRequired;
+
+    printf("Data before: ");
+    for (size_t i = 0; i < len; i++)
+    {
+        printf("%u ", *(payload + start + i) & 0xff);
+    }
+    
+    AES_CBC_encrypt_buffer(&aes, (uint8_t *) (payload + start), len);
+
+    printf("\nData After: ");
+    for (size_t i = 0; i < len; i++)
+    {
+        printf("%x ", *(payload + start + i) & 0xff);
+    }
 }

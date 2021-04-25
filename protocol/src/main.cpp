@@ -8,28 +8,19 @@
 #include "iotoro.h"
 #include "iotoro_linux.h"
 
-const char* deviceId = "6e795abf2d397b25";
-const char* deviceKey = "2a7056cfc228272140867b6a69a50d81";
-
-
-uint8_t sensor1 = 0;
-int8_t sensor2 = 1;
+const char* deviceId = "13feffeb83805790";
+const char* deviceKey = "c0c04877f74d69c68e120d45ddca18d0";
 
 
 IotoroClientLinux cona(deviceId, deviceKey);
 
- 
-char c[] = "13feffeb83805790";
+#include "aes.h"
+
 
 int main() { 
-    //AES_init_ctx_iv(&aes, key, iv);
-    //AES_CBC_encrypt_buffer(&aes, (unsigned char*) msg, 32);
     cona.test();
 
-    std::cout << "test over" << std::endl;
-
     // while (1);
-
 }  
 
 
@@ -38,4 +29,8 @@ int main() {
     con.setParam("X2", &sensor2);
     sensor1 = 2;
     sensor2 = 4;
+        //AES_ctx aes;
+    //AES_init_ctx_iv(&aes, devKey, (const uint8_t *) iv);
+    //printVector(data);
+    //AES_CBC_encrypt_buffer(&aes, (unsigned char*) data, 16); 
 */

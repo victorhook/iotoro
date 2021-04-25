@@ -3,6 +3,7 @@
 
 
 #include <stdint.h>
+#include <string.h>
 #include <string>
 #include <iostream>
 
@@ -63,13 +64,25 @@ typedef struct {
     ParamPtr paramPtr;
 } Param;
 
+/*
 typedef struct {
     uint8_t version;
     IOTORO_ACTION action;
     uint16_t payloadSize;
     char* data;
 } IotoroPacket;
- 
+*/
+
+typedef struct
+{
+    uint8_t version;
+    IOTORO_ACTION action;
+    uint16_t dataSize;
+    uint8_t* data;
+    uint8_t* deviceId;
+    uint8_t* iv;
+}  IotoroPacket; 
+
 
 class IotoroConnection
 {
@@ -115,7 +128,6 @@ class IotoroClient
         char* deviceIdHexified;
 
         // AES encryption.
-        char iv[AES_BLOCKLEN];
         AES_ctx aes;
 
         // Param settings.
@@ -131,19 +143,20 @@ class IotoroClient
         IotoroPacket iotoroPacket;
 
         // Setters & getters helper methods
-        void setIotoroPacket(IOTORO_ACTION action);
-        void setHttpHeaders(uint16_t httpPayloadSize);
+        void setIotoroPacket(IOTORO_ACTION action, uint8_t iv[AES_IV_SIZE]);
+        void setHttpHeaders();
         void setPayloadHeaders(IOTORO_ACTION action);
         void setParam(const char name[IOTORO_PARAM_MAX_NAME_SIZE], PARAM_TYPE type);
-        uint16_t getIotoroPacketSize();
-        uint16_t getIotoroPacketPayloadSize();
-        uint8_t getPadBytesRequired(uint16_t packetSize);
+
+        uint8_t getPadBytesRequired();
+        uint16_t getPayloadSize();
+        uint16_t getTotalPacketSize();
 
         void sendPacket();
         void encryptPayload(char* payload, uint16_t start, uint16_t end, uint8_t padBytesRequired);
 
         /* Generataing initialization vector for AES encryption is port-specific. */
-        virtual void generateIv(char iv[AES_BLOCKLEN]){};
+        virtual void generateIv(uint8_t iv[AES_BLOCKLEN]){};
 
     public:
         IotoroClient(const char* deviceId, const char* deviceKey, IotoroConnection* con);
@@ -151,16 +164,26 @@ class IotoroClient
                      OPERATION_MODE mode);
 
 
-        void test() {
-            setIotoroPacket(IOTORO_PING);
-            setHttpHeaders(getIotoroPacketSize());
-            printf("%s\n", _httpHeaders);
-            /*
-            connection->openConnection();
-            sendPacket();
-            connection->readPacket();
-            connection->closeConnection();
-            */
+        void printVector(uint8_t vec[16]) {
+            for (size_t i = 0; i < 16; i++) {
+                printf("%x ", vec[i]);
+            }
+            printf("\n");
+        }
+
+        /* 
+            Sends a packet to the iotoro backend server.
+            This is done by:
+            - Create the payload package.
+            - Create the necessary HTTP headers.
+            - Encrypt the payload
+            - Send the data 
+        */
+        int send(IOTORO_ACTION action);
+
+        void test()
+        {
+            send(IOTORO_PING);
         }
 
         /* 
