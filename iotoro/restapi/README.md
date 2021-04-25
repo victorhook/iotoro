@@ -58,3 +58,23 @@ There are different types of messages:
 
 
 ## Encryption
+
+### URL endpoint:
+`/api/hexified(md5sum(hexified(device_id)))/`
+
+- `device_id` - The device id represented as RAW bytes.
+- `hexified` - A string-friendly hex representation where each byte is represented in hex.
+- `md5sum` - The md5sum of the input.
+
+
+### Payload
+The payload of a packet is constructed as follows:
+
+1. The version, action and payload length is added to the first x bytes.
+2. The data content is appended
+3. Pad bytes are appended, since AES requires input to be in block size of X (16 for AES128).
+4. The device Id is appended (as raw bytes)
+5. Payload is encrypted with AES128
+6. The iv used for encryption is appended
+
+`AES128( version + action + len +  content  +  device_id ) + iv`
