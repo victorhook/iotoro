@@ -8,24 +8,29 @@
 #include "iotoro.h"
 #include "iotoro_linux.h"
 
-const char* deviceId = "Hello world";
-const char* deviceKey = "Hello world key";
+const char* deviceId = "6e795abf2d397b25";
+const char* deviceKey = "2a7056cfc228272140867b6a69a50d81";
 
 
-//IotoroClient con(deviceId, deviceKey);
- 
 uint8_t sensor1 = 0;
 int8_t sensor2 = 1;
 
 
+IotoroClientLinux cona(deviceId, deviceKey);
 
-
-
+ 
+char c[] = "13feffeb83805790";
 
 int main() { 
-    //lincon.test();
+    //AES_init_ctx_iv(&aes, key, iv);
+    //AES_CBC_encrypt_buffer(&aes, (unsigned char*) msg, 32);
+    cona.test();
 
-} 
+    std::cout << "test over" << std::endl;
+
+    // while (1);
+
+}  
 
 
 /*

@@ -1,0 +1,5 @@
+- [ ] MD5 hash for device_id in endpoint url
+- [ ] Make sending a packet work
+- [ ] Read packet
+  - [ ] Decrypt packet
+- [ ] 
