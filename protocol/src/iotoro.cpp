@@ -1,11 +1,13 @@
 #include "iotoro.h"
 
+#include "md5.h"
 #include <string.h>
 #define string std::string
 
 
 /* -- Inlines -- */
 
+/* Returns the byte value 0-255 from an ascii. */
 static inline uint8_t getAsciiValue(char c)
 {
     if (c >= 'A' && c <= 'Z') {
@@ -17,6 +19,22 @@ static inline uint8_t getAsciiValue(char c)
     }
 }
 
+/* Returns the ascii representation of a byte. */
+static inline char valueToAscii(uint8_t val)
+{
+    if (val <  10) {
+        return '0' + val;
+    } else {
+        #ifdef HEXIFLY_BIG_CHARS
+            char offset = 'A';
+        #else
+            unsigned char offset = 'a';
+        #endif
+        return offset + (val - 10);
+    }
+}
+
+/* Turns a stream of hexified ascii characters to stream of bytes, */
 static inline void unHexifly(const char* from, char* to, size_t len)
 {
     size_t i = 0, j = 0;
@@ -25,7 +43,30 @@ static inline void unHexifly(const char* from, char* to, size_t len)
         j += 2;
         i++;
     }
-        
+}
+
+/* Turns a stream of bytes into the ascii HEX representation. */
+static inline void hexifly(const char* from, char* to, size_t len)
+{
+    size_t i = 0, j = 0;
+    while (i < len) {
+        uint8_t first = (from[i] & 0xf0) >> 4;
+        uint8_t second = from[i] & 0x0f;
+
+        to[j++] = valueToAscii(first);
+        to[j++] = valueToAscii(second);
+
+        i++;
+    }
+}
+
+/* Performs md5sum of the given input. */
+static inline void md5sum(const char* from, char to[16], size_t len)
+{
+    MD5_CTX ctx;
+    MD5_Init(&ctx);
+    MD5_Update(&ctx, from, len);
+    MD5_Final((unsigned char*) to, &ctx);
 }
 
 
