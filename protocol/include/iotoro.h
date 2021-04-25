@@ -15,8 +15,9 @@
 #define IOTORO_API_METHOD "POST"
 #define IOTORO_API_ENDPOINT "/api/"
 #define IOTORO_PACKET_HEADER_SIZE 3
-#define IOTORO_DEVICE_ID_SIZE 8             // In bytes.
-#define IOTORO_DEVICE_KEY_SIZE 16           // In bytes.
+#define IOTORO_DEVICE_ID_SIZE 8                             // In bytes.
+#define IOTORO_DEVICE_ID_SIZE_HEX IOTORO_DEVICE_ID_SIZE*2   // In bytes.
+#define IOTORO_DEVICE_KEY_SIZE 16                           // In bytes.
 
 #define IP_ADDR_SIZE 100
 #define HTTP_ENDING_CR_BYTES 4 
@@ -153,10 +154,13 @@ class IotoroClient
         void test() {
             setIotoroPacket(IOTORO_PING);
             setHttpHeaders(getIotoroPacketSize());
+            printf("%s\n", _httpHeaders);
+            /*
             connection->openConnection();
             sendPacket();
             connection->readPacket();
             connection->closeConnection();
+            */
         }
 
         /* 

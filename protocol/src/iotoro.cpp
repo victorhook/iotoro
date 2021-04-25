@@ -7,6 +7,8 @@
 
 /* -- Inlines -- */
 
+#define HEXIFLY_BIG_CHARS 1
+
 /* Returns the byte value 0-255 from an ascii. */
 static inline uint8_t getAsciiValue(char c)
 {
@@ -219,7 +221,18 @@ OPERATION_MODE IotoroClient::getOperationMode()
 /* -- Private -- */
 void IotoroClient::setHttpHeaders(uint16_t httpPayloadSize)
 {
-    string endpoint = string(IOTORO_API_ENDPOINT) + string(deviceIdHexified) + string("/");
+    // Calculate the md5sum of the device id before putting it into the endpoint URL.
+    char deviceIdMd5sum[IOTORO_DEVICE_ID_SIZE_HEX];
+
+    // The hexified version of the md5sum must be 2 * 16 (16 is md5sum size, aka 128 bits)
+    char deviceIdM5dsumHexified[32];
+    md5sum((char *) deviceIdHexified, deviceIdMd5sum, IOTORO_DEVICE_ID_SIZE_HEX);
+
+    // Hexifly the md5sum of the result so it's string-friendly.
+    hexifly((const char*) deviceIdMd5sum, deviceIdM5dsumHexified, 16);
+
+
+    string endpoint = string(IOTORO_API_ENDPOINT) + string(deviceIdM5dsumHexified, 32) + string("/");
     string headers = string(IOTORO_API_METHOD) + string(" ") + endpoint  + string(" HTTP/1.1\r\n")
                      + string("Content-Type: application/x-www-form-urlencoded\r\n")
                      + string("Content-Length: ") + std::to_string(httpPayloadSize) 
