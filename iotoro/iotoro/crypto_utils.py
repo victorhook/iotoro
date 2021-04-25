@@ -9,6 +9,8 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Random import get_random_bytes
 
+import logging
+
 
 # -- Classes -- #
 @dataclass
@@ -41,6 +43,10 @@ def md5(device_id: str) -> str:
     return hashlib.md5(device_id).hexdigest()
 
 
+def ashex(data):
+    return ' '.join(hex(a)[2:] for a in data)
+
+
 def decode_packet(data: bytes, device_key: bytes) -> Packet:
     """ Decodes a packet using AES encryption, given the device key. """
     # Turn the data into a packet helper format.
@@ -54,7 +60,11 @@ def decode_packet(data: bytes, device_key: bytes) -> Packet:
 
     # Decrypt & unpad the data.
     decrypted = cipher.decrypt(packet.data)
-    decrypted = unpad(decrypted, AES.block_size)
+    try:
+        decrypted = unpad(decrypted, AES.block_size)
+    except ValueError:
+        logging.warn('Padding is incorrect, might be incorrect key!')
+        return None
 
     # Pack the info into a packet format.
     packet = Packet(

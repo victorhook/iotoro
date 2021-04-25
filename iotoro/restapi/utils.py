@@ -15,7 +15,9 @@ def make_pong() -> bytes:
         b''
     )
 
+
 def get_device(device_id: str) -> models.Device:
+    device_id = device_id.lower()
     device = list(filter(
                 lambda device: crypto_utils.md5(device.device_id) == device_id,
                 models.Device.objects.all())
@@ -39,6 +41,12 @@ def requires_device_auth(func: callable):
             # Try to decrypt the packet
             packet = crypto_utils.decode_packet(request.body,
                                                 device.device_key)
+
+            # TODO: Handle these errors better.
+            
+            if packet is None:
+                print('Incorrect authorization')
+                return HttpResponse('Incorrect authorization')
 
             if packet.device_id == device.device_id:
                 print(f'Device id {packet.device_id} authorized')
