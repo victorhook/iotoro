@@ -1,0 +1,6 @@
+.vscode/
+iotoro
+iotoro.d
+temp/
+*.o
+*.d
