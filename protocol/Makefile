@@ -15,7 +15,7 @@ DEPS += $(PORT_INCLUDE)
 
 # -- Compiler -- #
 CC = g++
-CFLAGS = -I $(INCLUDE) -I $(PORT_INCLUDE)
+CFLAGS = -I $(INCLUDE) -I $(PORT_INCLUDE) -g -Wall
 
 # -- Output -- #
 TARGET = iotoro
