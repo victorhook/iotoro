@@ -1,22 +1,15 @@
-#include <stdio.h>
-#include <iostream>
-#include <string>
-#include <cstring>
-
 #define DEBUG 1
 
-#include "iotoro.h"
 #include "iotoro_linux.h"
+
 
 const char* deviceId = "13feffeb83805790";
 const char* deviceKey = "c0c04877f74d69c68e120d45ddca18d0";
 
 
 IotoroClientLinux cona(deviceId, deviceKey);
-
-#include "aes.h"
-
-
+     
+  
 int main() { 
     cona.test();
 

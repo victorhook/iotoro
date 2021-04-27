@@ -1,13 +1,9 @@
 #ifndef IOTORO_H
 #define IOTORO_H
 
-
-#include <stdint.h>
-#include <string.h>
-#include <string>
-#include <iostream>
-
 #include "aes.h"
+#include <stdint.h>
+
  
 /* --- Constants --- */
 #define IOTORO_API_URL "localhost"
@@ -64,15 +60,6 @@ typedef struct {
     ParamPtr paramPtr;
 } Param;
 
-/*
-typedef struct {
-    uint8_t version;
-    IOTORO_ACTION action;
-    uint16_t payloadSize;
-    char* data;
-} IotoroPacket;
-*/
-
 typedef struct
 {
     uint8_t version;
@@ -125,7 +112,7 @@ class IotoroClient
         // For authorization and encryption.
         uint8_t deviceId[IOTORO_DEVICE_ID_SIZE];
         uint8_t deviceKey[IOTORO_DEVICE_KEY_SIZE];
-        char* deviceIdHexified;
+        const char* deviceIdHexified;
 
         // AES encryption.
         AES_ctx aes;
@@ -162,14 +149,6 @@ class IotoroClient
         IotoroClient(const char* deviceId, const char* deviceKey, IotoroConnection* con);
         IotoroClient(const char* deviceId, const char* deviceKey, IotoroConnection* con, 
                      OPERATION_MODE mode);
-
-
-        void printVector(uint8_t vec[16]) {
-            for (size_t i = 0; i < 16; i++) {
-                printf("%x ", vec[i]);
-            }
-            printf("\n");
-        }
 
         /* 
             Sends a packet to the iotoro backend server.

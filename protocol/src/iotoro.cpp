@@ -1,13 +1,20 @@
 #include "iotoro.h"
-
 #include "md5.h"
-#include <string.h>
-#define string std::string
 
+#include <string.h>
 
 /* -- Inlines -- */
 
 #define HEXIFLY_BIG_CHARS 1
+
+#include <iostream>
+#define IOTORO_LOG_DEBUG(msg) (std::cout << msg)
+#define string std::string
+
+#ifndef TO_STRING
+    #define TO_STRING std::to_string
+#endif
+
 
 /* Returns the byte value 0-255 from an ascii. */
 static inline uint8_t getAsciiValue(char c)
@@ -83,17 +90,12 @@ IotoroConnection::IotoroConnection()
 
 int IotoroConnection::sendPacket(const char* data, uint16_t len) 
 { 
-
-    DEBUG_LOG("\n");
-    for (size_t i = 0; i < len; i++)
-    {
-        putchar(data[i]);
-    }
+    IOTORO_LOG_DEBUG("\n");
 
     if (_isConnected) {
         return doWrite(data, len-1);
     } else {
-        DEBUG_LOG("Not connected, can't send packet!\n");
+        IOTORO_LOG_DEBUG("Not connected, can't send packet!\n");
         return -1;
     }
 }
@@ -103,7 +105,7 @@ int IotoroConnection::readPacket()
     if (_isConnected) {
         return doRead();
     } else {
-        DEBUG_LOG("Not connected, can't send packet!\n");
+        IOTORO_LOG_DEBUG("Not connected, can't send packet!\n");
         return -1;
     }
 }
@@ -111,14 +113,14 @@ int IotoroConnection::readPacket()
 int IotoroConnection::openConnection() 
 {
     if (_isConnected) {
-        DEBUG_LOG("Already connected!\n");
+        IOTORO_LOG_DEBUG("Already connected!\n");
         return -1;
     } else {
-        DEBUG_LOG("Trying to connect to ");
-        DEBUG_LOG(hostIp);
-        DEBUG_LOG(" on port ");
-        DEBUG_LOG(hostPort);
-        DEBUG_LOG("\n");
+        IOTORO_LOG_DEBUG("Trying to connect to ");
+        IOTORO_LOG_DEBUG(hostIp);
+        IOTORO_LOG_DEBUG(" on port ");
+        IOTORO_LOG_DEBUG(hostPort);
+        IOTORO_LOG_DEBUG("\n");
         doConnect();
         return 1;
     }
@@ -129,7 +131,7 @@ int IotoroConnection::closeConnection()
     if (_isConnected) {
         return doDisconnect();
     } else {
-        DEBUG_LOG("Not connected, nothing to close!\n");
+        IOTORO_LOG_DEBUG("Not connected, nothing to close!\n");
         return -1;
     }
 }
@@ -144,7 +146,7 @@ IotoroClient::IotoroClient(const char* deviceId, const char* deviceKey, IotoroCo
 
 IotoroClient::IotoroClient(const char* deviceId, const char* deviceKey, IotoroConnection* con,
                            OPERATION_MODE mode)
- : deviceIdHexified((char*) deviceId), connection(con), mode(mode)
+ : connection(con), deviceIdHexified(deviceId), mode(mode)
 {
     unHexifly(deviceId, (char*) this->deviceId, IOTORO_DEVICE_ID_SIZE);
     unHexifly(deviceKey, (char*) this->deviceKey, IOTORO_DEVICE_KEY_SIZE);
@@ -241,7 +243,7 @@ void IotoroClient::setHttpHeaders()
     string endpoint = string(IOTORO_API_ENDPOINT) + string(deviceIdM5dsumHexified, 32) + string("/");
     string headers = string(IOTORO_API_METHOD) + string(" ") + endpoint  + string(" HTTP/1.1\r\n")
                      + string("Content-Type: application/x-www-form-urlencoded\r\n")
-                     + string("Content-Length: ") + std::to_string(getPayloadSize()) 
+                     + string("Content-Length: ") + TO_STRING(getPayloadSize())
                      + string("\r\n\r\n");      // Seperate headers from the data.
     _httpHeaderSize = headers.size();
     memset(_httpHeaders, 0, IOTORO_MAX_HTTP_HEADER_SIZE);
@@ -344,15 +346,8 @@ void IotoroClient::sendPacket()
     memcpy(packet + index, deviceId, IOTORO_DEVICE_ID_SIZE);
     index += IOTORO_DEVICE_ID_SIZE;
 
-    printf("\nIV: ");
-    printVector((uint8_t *) iotoroPacket.iv);
-    printf("Device Key: ");
-    printVector((uint8_t *) deviceKey);
-
     encryptPayload(packet, _httpHeaderSize, index, padBytesRequired);
     index += padBytesRequired;
-
-    printf("\n\n");
 
     // Finally, add iv to the payload.
     memcpy(packet + index, iotoroPacket.iv, AES_IV_SIZE);
@@ -373,18 +368,5 @@ void IotoroClient::encryptPayload(char* payload, uint16_t start, uint16_t end, u
 
     // Encrypt the data.
     size_t len = (end - start) + padBytesRequired;
-
-    printf("Data before: ");
-    for (size_t i = 0; i < len; i++)
-    {
-        printf("%u ", *(payload + start + i) & 0xff);
-    }
-    
     AES_CBC_encrypt_buffer(&aes, (uint8_t *) (payload + start), len);
-
-    printf("\nData After: ");
-    for (size_t i = 0; i < len; i++)
-    {
-        printf("%x ", *(payload + start + i) & 0xff);
-    }
 }

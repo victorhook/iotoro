@@ -1,5 +1,6 @@
 #include "iotoro_linux.h"
 
+
 /* Creds to http://libraryofcprograms.blogspot.com/2014/10/url-to-ip-address.html */
 static int hostname_to_ip(char * hostname , char* ip)
 {
@@ -26,11 +27,6 @@ static int hostname_to_ip(char * hostname , char* ip)
 
 int IotoroConnectionLinux::doConnect()
 {
-    if (_isConnected) {
-        IOTORO_LOG("Already connected");
-        return -1;
-    }
-
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         IOTORO_LOG("Error opening socket");
@@ -58,25 +54,14 @@ int IotoroConnectionLinux::doConnect()
 
 int IotoroConnectionLinux::doDisconnect()
 {
-    if (!_isConnected) {
-        IOTORO_LOG("Not connected, can't disconnect.");
-        return -1;
-    }
-
-    close(sockfd);
-
+    int result = close(sockfd);
     sockfd = 0;
-    _isConnected = false;
-    return 1;
+    return result;
 }
 
 int IotoroConnectionLinux::doWrite(const char* data, uint16_t len)
 {
-    int res = write(sockfd, data, len);
-    if (res < 0) {
-        IOTORO_LOG("Failed to write data to socket!");
-    }
-    return len - res;
+    return write(sockfd, data, len);
 }
 
 int IotoroConnectionLinux::doRead()
@@ -97,17 +82,17 @@ IotoroConnectionLinux::IotoroConnectionLinux()
 }
 
 // Create an instance of the connection.
-IotoroConnection* iotoroLinuxCon = new IotoroConnectionLinux();
+IotoroConnectionLinux iotoroLinuxCon;
 
 /* -- Client -- */
 
 IotoroClientLinux::IotoroClientLinux(const char* deviceId, const char* deviceKey)
-    : IotoroClient(deviceId, deviceKey, iotoroLinuxCon)
+    : IotoroClient(deviceId, deviceKey, (IotoroConnection*) &iotoroLinuxCon)
 {}
 
 IotoroClientLinux::IotoroClientLinux(const char* deviceId, const char* deviceKey, 
                                      OPERATION_MODE mode)
-    : IotoroClient(deviceId, deviceKey, iotoroLinuxCon, mode)
+    : IotoroClient(deviceId, deviceKey, (IotoroConnection*) &iotoroLinuxCon, mode)
 {}
 
 void IotoroClientLinux::generateIv(uint8_t iv[AES_BLOCKLEN])

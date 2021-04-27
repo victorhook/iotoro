@@ -1,15 +1,17 @@
 #ifndef IOTORO_ESP8266_H
 #define IOTORO_ESP8266_H
 
+#ifdef DEBUG
+    #define IOTORO_LOG_DEBUG(msg) Serial.print(msg)
+#else
+    #define IOTORO_LOG_DEBUG(msg) (msg)
+#endif
+
+#define TO_STRING String
+
 #include "iotoro.h"
 #include "ESP8266WiFi.h"
 #include <iostream>
-
-#ifdef DEBUG
-    #define IOTORO_LOG(msg) (std::cout << msg << std::endl)
-#else
-    #define IOTORO_LOG(msg) (msg)
-#endif
 
 
 class IotoroConnectionESP8266: public IotoroConnection

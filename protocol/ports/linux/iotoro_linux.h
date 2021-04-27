@@ -4,14 +4,8 @@
 #define DEBUG 1
 
 #include "iotoro.h"
+
 #include <iostream>
-
-#ifdef DEBUG
-    #define IOTORO_LOG(msg) (std::cout << msg << std::endl)
-#else
-    #define IOTORO_LOG(msg) (msg)
-#endif
-
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +13,12 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>  
 #include <unistd.h>
+
+#ifdef DEBUG
+    #define IOTORO_LOG(msg) (std::cout << msg << std::endl)
+#else
+    #define IOTORO_LOG(msg) (msg)
+#endif
 
 
 class IotoroConnectionLinux: public IotoroConnection
@@ -46,7 +46,7 @@ class IotoroConnectionLinux: public IotoroConnection
         IotoroConnectionLinux();
 
 };
-
+ 
 
 class IotoroClientLinux: IotoroClient
 {
