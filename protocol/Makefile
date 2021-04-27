@@ -1,23 +1,37 @@
-INCLUDES = include
+# -- Port -- #
+PORT = linux
 
-SRC_DIR = src
-OBJ_DIR = objects
-SRC = $(wildcard $(SRC_DIR)/*.cpp)
-# OBJ = $(SRC:.cpp=.o)
-OBJ = $(patsubst $(OBJ_DIR)/%.o,%$(SRC_DIR)%.cpp,$(SRC))
-DEPS = $(wildcard $(INCLUDES)/*.h)
+# -- Source files -- #
+SRC = $(wildcard src/*.cpp)
+SRC += ports/$(PORT)/iotoro_$(PORT).cpp
+OBJ = $(patsubst %.cpp,%.o,$(SRC))
 
+# -- Include dirs -- #
+INCLUDE = include
+PORT_INCLUDE = ports/$(PORT)
+
+DEPS = $(INCLUDE)/*
+DEPS += $(PORT_INCLUDE)
+
+# -- Compiler -- #
 CC = g++
-CFLAGS = -I $(INCLUDES) -g -Wno-reorder
+CFLAGS = -I $(INCLUDE) -I $(PORT_INCLUDE)
 
+# -- Output -- #
 TARGET = iotoro
 
-$(TARGET): $(OBJ) $(DEPS)
-	$(CC) $(CFLAGS) $^ -o $@
-
-%.o: %.cpp Makefile  
-	$(CC) $(CFLAGS) $^ -o $@
 
 run: $(TARGET)
-	@ chmod +x $(TARGET) 
+	echo $(INCLUDE)
 	./$(TARGET)
+
+clean: $(TARGET)
+	rm $(OBJ)
+
+
+$(TARGET): $(OBJ) 
+	$(CC) $(CFLAGS) $^ -o $@
+
+
+%.o: %.cpp Makefile $(DEPS)
+	$(CC) -c $(CFLAGS) $< -o $@ 
