@@ -15,14 +15,13 @@ DEPS += $(PORT_INCLUDE)
 
 # -- Compiler -- #
 CC = g++
-CFLAGS = -I $(INCLUDE) -I $(PORT_INCLUDE) -g -Wall
+CFLAGS = -I src -I $(PORT_INCLUDE) -g -Wall
 
 # -- Output -- #
 TARGET = iotoro
 
 
 run: $(TARGET)
-	echo $(INCLUDE)
 	./$(TARGET)
 
 clean: $(TARGET)
