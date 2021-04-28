@@ -20,14 +20,13 @@ CC = g++
 CFLAGS = -I src -I $(PORT_INCLUDE) -g -Wall
 
 # -- Output -- #
-TARGET = iotoro_TESTI
+TARGET = $(BUILD_DIR)/iotoro
 
 build: $(OBJ)
 	g++ $(OBJ) -o $(TARGET)
 
 run: $(build)
-	echo $^
-
+	./$(TARGET)
 
 clean:
 	rm $(OBJ)
