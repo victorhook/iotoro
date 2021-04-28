@@ -9,7 +9,11 @@ from Crypto.Random import get_random_bytes
 def asbin(data: bytes):
     print(' '.join(hex(a)[2:] for a in data))
 
-data = get_random_bytes(18)
-asbin(data)
-data = pad(data, 16)
-asbin(data)
+def asord(data: bytes):
+    print(' '.join(str(a) for a in data))
+
+
+id = get_random_bytes(8)
+a = binascii.hexlify(id).decode('utf-8')
+k = '13feffeb83805790'
+print(asord(binascii.unhexlify(k)))

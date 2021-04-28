@@ -3,7 +3,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from device import models as device_models
-from iotoro import api
+from iotoro_web import api
 
 
 def format_date(date: timezone) -> str:

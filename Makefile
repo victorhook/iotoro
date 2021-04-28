@@ -2,35 +2,36 @@
 PORT = linux
 
 # -- Source files -- #
-SRC = $(wildcard src/*.cpp)
-SRC += ports/$(PORT)/iotoro_$(PORT).cpp
-OBJ = $(patsubst %.cpp,%.o,$(SRC))
+#SRC = $(wildcard src/*.cpp)
+#SRC += ports/$(PORT)/iotoro_$(PORT).cpp
+#OBJ = $(patsubst %.cpp,%.o,$(SRC))
 
-# -- Include dirs -- #
-INCLUDE = include
-PORT_INCLUDE = ports/$(PORT)
+SOURCE_DIR = src
+BUILD_DIR = build
 
-DEPS = $(INCLUDE)/*
-DEPS += $(PORT_INCLUDE)
+SOURCES = aes.cpp iotoro.cpp md5.cpp main.cpp
+SOURCES += iotoro_$(PORT).cpp
+
+SRC = $(patsubst %.cpp,$(SOURCE_DIR)/%.cpp,$(SOURCES))
+OBJ = $(patsubst $(SOURCE_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRC))
 
 # -- Compiler -- #
 CC = g++
 CFLAGS = -I src -I $(PORT_INCLUDE) -g -Wall
 
 # -- Output -- #
-TARGET = iotoro
+TARGET = iotoro_TESTI
+
+build: $(OBJ)
+	g++ $(OBJ) -o $(TARGET)
+
+run: $(build)
+	echo $^
 
 
-run: $(TARGET)
-	./$(TARGET)
-
-clean: $(TARGET)
+clean:
 	rm $(OBJ)
+		
 
-
-$(TARGET): $(OBJ) 
-	$(CC) $(CFLAGS) $^ -o $@
-
-
-%.o: %.cpp Makefile $(DEPS)
-	$(CC) -c $(CFLAGS) $< -o $@ 
+$(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.cpp
+	g++ -c $^ -o $@

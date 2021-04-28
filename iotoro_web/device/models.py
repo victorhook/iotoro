@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.conf import settings
 
-from iotoro import crypto_utils
+from iotoro_web import crypto_utils
 
 
 def get_length_validator(length: int) -> RegexValidator:

@@ -4,8 +4,8 @@ from django.http import HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 
-from iotoro.crypto_utils import Packet
-from iotoro import api
+from iotoro_web.crypto_utils import Packet
+from iotoro_web import api
 from device.models import Device
 
 from . import utils

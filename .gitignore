@@ -3,3 +3,9 @@ iotoro/iotoro/settings.py
 *.pyc
 env/
 tools/
+.vscode/
+iotoro
+iotoro.d
+temp/
+*.o
+*.d
