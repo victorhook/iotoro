@@ -9,23 +9,25 @@ PORT = linux
 SOURCE_DIR = src
 BUILD_DIR = build
 
-SOURCES = aes.cpp iotoro.cpp md5.cpp main.cpp
+SOURCES = aes.cpp md5.cpp iotoro_client.cpp iotoro_connection.cpp iotoro_utils.cpp  main.cpp
 SOURCES += iotoro_$(PORT).cpp
 
 SRC = $(patsubst %.cpp,$(SOURCE_DIR)/%.cpp,$(SOURCES))
 OBJ = $(patsubst $(SOURCE_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRC))
+DEPS = $(patsubst %.cpp,%.h,$(SRC))
 
 # -- Compiler -- #
 CC = g++
-CFLAGS = -I src -I $(PORT_INCLUDE) -g -Wall
+CFLAGS = -I $(SOURCE_DIR) -Wall -g
 
 # -- Output -- #
 TARGET = $(BUILD_DIR)/iotoro
 
-build: $(OBJ)
-	g++ $(OBJ) -o $(TARGET)
 
-run: $(build)
+$(TARGET): $(OBJ) Makefile 
+	$(CC) $(CFLAGS) $(OBJ) -o $@
+
+run: $(TARGET) 
 	./$(TARGET)
 
 clean:
@@ -33,4 +35,5 @@ clean:
 		
 
 $(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.cpp
-	g++ -c $^ -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
+ 

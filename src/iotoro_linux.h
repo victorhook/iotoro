@@ -40,7 +40,7 @@ class IotoroConnectionLinux: public IotoroConnection
         int doWrite(const char* data, uint16_t len);
 
         /* Tries to read a packet and return it. This method blocks. */
-        int doRead();
+        int doRead(char* buff, const size_t len);
 
     public:
         IotoroConnectionLinux();
@@ -48,21 +48,16 @@ class IotoroConnectionLinux: public IotoroConnection
 };
  
 
-class IotoroClientLinux: IotoroClient
+class IotoroClientLinux: public IotoroClient
 {
     private:
         virtual void generateIv(uint8_t iv[AES_BLOCKLEN]);
 
     public:
-        IotoroClientLinux(const char* deviceId, const char* deviceKey);
         IotoroClientLinux(const char* deviceId, const char* deviceKey, 
-                          OPERATION_MODE mode);
+                          OPERATION_MODE mode = AUOMATIC);
 
-        void test()
-        {
-            IotoroClient::test();
-        }
-
+  
 };
 
 #endif

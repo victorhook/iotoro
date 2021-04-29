@@ -1,8 +1,19 @@
 #ifndef IOTORO_H
 #define IOTORO_H
 
-#include "aes.h"
 #include <stdint.h>
+#include <string.h>
+
+/* -- Platform specific -- */
+#define HEXIFLY_BIG_CHARS 1
+
+#include <iostream>
+#define IOTORO_LOG_DEBUG(msg) (std::cout << msg)
+#define string std::string
+
+#ifndef TO_STRING
+    #define TO_STRING std::to_string
+#endif
 
  
 /* --- Constants --- */
@@ -18,12 +29,14 @@
 
 #define IP_ADDR_SIZE 100
 #define HTTP_ENDING_CR_BYTES 4 
+#define IOTORO_PARAM_TYPE_SIZE 1        // The type that indicates what type the parameter is.
 
 /* Configurable */
-#define IOTORO_PARAM_MAX_NAME_SIZE 10
+#define IOTORO_MAX_PARAM_NAME_SIZE 10
 #define IOTORO_MAX_PARAMETERS 10
 #define IOTORO_MAX_HTTP_HEADER_SIZE 150
 #define IOTORO_MAX_PAYLOAD_HEADER_SIZE 1
+#define IOTORO_MAX_TCP_PACKET_READ_SIZE 512
 
 #define IOTORO_VERSION 1
 
@@ -44,20 +57,39 @@ typedef enum {
     IOTORO_READ_DOWN = 6
 } IOTORO_ACTION;
     
+
 typedef enum {
+    PARAM_BOOL,
     PARAM_UINT_8,
     PARAM_INT_8,
-} PARAM_TYPE;
+    PARAM_UINT_16,
+    PARAM_INT_16,
+    PARAM_UINT_32,
+    PARAM_INT_32,
+    PARAM_UINT_64,
+    PARAM_INT_64,
+    PARAM_FLOAT,
+    PARAM_DOBULE,
+} __attribute__((packed)) PARAM_TYPE;
 
 union ParamPtr {
     uint8_t* u8;
     int8_t* i8;
+    uint16_t* u16;
+    int16_t* i16;
+    uint32_t* u32;
+    int32_t* i32;
+    uint64_t* u64;
+    int64_t* i64;
+    float* f;
+    double* d;
+    bool* b;
 };
 
 typedef struct {
-    char name[IOTORO_PARAM_MAX_NAME_SIZE];
-    PARAM_TYPE type;
-    ParamPtr paramPtr;
+    char name[IOTORO_MAX_PARAM_NAME_SIZE];      // 10
+    PARAM_TYPE type;                            // 1
+    ParamPtr paramPtr;                          // 1
 } Param;
 
 typedef struct
@@ -81,7 +113,7 @@ class IotoroConnection
         IotoroConnection();
 
         virtual int doWrite(const char* data, uint16_t len) = 0;
-        virtual int doRead() = 0;
+        virtual int doRead(char* buff, const size_t len) = 0;
         virtual int doConnect() = 0;
         virtual int doDisconnect() = 0;
 
@@ -90,7 +122,7 @@ class IotoroConnection
         int sendPacket(const char* data, uint16_t len);
 
         /* Tries to read a packet and return it. This method blocks. */
-        int readPacket();
+        int readPacket(char* buff, size_t len);
 
         /* Connects to the iotoro server. Returns -1 if error. */
         int openConnection();
@@ -102,11 +134,15 @@ class IotoroConnection
         bool isConnected() { return _isConnected; }
 };
 
+#include "aes.h"
 
 class IotoroClient
 {
     protected:
         IotoroConnection* connection;
+        Param params[IOTORO_MAX_PARAMETERS];
+        uint8_t paramsSet;
+
 
     private:
         // For authorization and encryption.
@@ -119,8 +155,7 @@ class IotoroClient
 
         // Param settings.
         OPERATION_MODE mode;
-        Param params[IOTORO_MAX_PARAMETERS];
-        uint8_t paramsSet;
+
         uint16_t paramWriteFrequency;
         uint16_t pingFrequency;
 
@@ -133,22 +168,28 @@ class IotoroClient
         void setIotoroPacket(IOTORO_ACTION action, uint8_t iv[AES_IV_SIZE]);
         void setHttpHeaders();
         void setPayloadHeaders(IOTORO_ACTION action);
-        void setParam(const char name[IOTORO_PARAM_MAX_NAME_SIZE], PARAM_TYPE type);
+        void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], PARAM_TYPE type);
+
+        void debugPacket(const char* packet, const uint16_t packetSize);
 
         uint8_t getPadBytesRequired();
         uint16_t getPayloadSize();
         uint16_t getTotalPacketSize();
+        uint16_t getTotalParamsSize();
 
-        void sendPacket();
-        void encryptPayload(char* payload, uint16_t start, uint16_t end, uint8_t padBytesRequired);
+        size_t fillBuffWithParams(char* buff);
+        void fillPacket(char* buff, const uint16_t packetSize);
+
+        // Encryption
+        void addPadBytes(char* payload, uint8_t padBytesRequired);
+        void encryptPayload(char* payload, size_t len);
 
         /* Generataing initialization vector for AES encryption is port-specific. */
         virtual void generateIv(uint8_t iv[AES_BLOCKLEN]){};
 
     public:
-        IotoroClient(const char* deviceId, const char* deviceKey, IotoroConnection* con);
-        IotoroClient(const char* deviceId, const char* deviceKey, IotoroConnection* con, 
-                     OPERATION_MODE mode);
+        IotoroClient(const char* deviceId, const char* deviceKey, 
+                    IotoroConnection* con, OPERATION_MODE mode);
 
         /* 
             Sends a packet to the iotoro backend server.
@@ -160,10 +201,9 @@ class IotoroClient
         */
         int send(IOTORO_ACTION action);
 
-        void test()
-        {
-            send(IOTORO_PING);
-        }
+        int recv();
+
+        int sendParams();
 
         /* 
             Starts constant communication with the backend server.
@@ -201,10 +241,67 @@ class IotoroClient
         */
 
         /* Adds a paramter to the paramlist, that will be pushed upstream. */
-        void setParam(const char name[IOTORO_PARAM_MAX_NAME_SIZE], uint8_t* ptr);
+        void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], bool& ptr);
 
         /* Adds a paramter to the paramlist, that will be pushed upstream. */
-        void setParam(const char name[IOTORO_PARAM_MAX_NAME_SIZE], int8_t* ptr);
+        void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], uint8_t& ptr);
+
+        /* Adds a paramter to the paramlist, that will be pushed upstream. */
+        void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], int8_t& ptr);
+
+        /* Adds a paramter to the paramlist, that will be pushed upstream. */
+        void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], uint16_t& ptr);
+
+        /* Adds a paramter to the paramlist, that will be pushed upstream. */
+        void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], int16_t& ptr);
+
+        /* Adds a paramter to the paramlist, that will be pushed upstream. */
+        void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], uint32_t& ptr);
+
+        /* Adds a paramter to the paramlist, that will be pushed upstream. */
+        void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], int32_t& ptr);
+
+        /* Adds a paramter to the paramlist, that will be pushed upstream. */
+        void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], uint64_t& ptr);
+
+        /* Adds a paramter to the paramlist, that will be pushed upstream. */
+        void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], int64_t& ptr);
+
+        /* Adds a paramter to the paramlist, that will be pushed upstream. */
+        void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], float& ptr);
+
+        /* Adds a paramter to the paramlist, that will be pushed upstream. */
+        void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], double& ptr);
 };
+
+/* --- Utils --- */
+
+/* Returns the byte value 0-255 from an ascii. */
+uint8_t getAsciiValue(char c);
+
+/* Returns the ascii representation of a byte. */
+char valueToAscii(uint8_t val);
+
+/* Turns a stream of hexified ascii characters to stream of bytes, */
+void unHexifly(const char* from, char* to, size_t len);
+
+/* Turns a stream of bytes into the ascii HEX representation. */
+void hexifly(const char* from, char* to, size_t len);
+
+/* Performs md5sum of the given input. */
+void md5sum(const char* from, char to[16], size_t len);
+
+/*  
+    Returns the size of a parmeter type. 
+    Note that these sizes are pre-decided, to ensure correct parsing
+    on the server side.
+*/
+uint8_t getParamTypeSize(PARAM_TYPE type);
+
+/* Returns the size of a parameter settings. */
+uint8_t getParamSettingSize(Param param);
+
+/* Puts the parameter data into the buffer, with the correct size and format. */
+void putParamData(char* buff, const Param& param);
 
 #endif

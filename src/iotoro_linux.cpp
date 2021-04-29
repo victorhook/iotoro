@@ -64,13 +64,9 @@ int IotoroConnectionLinux::doWrite(const char* data, uint16_t len)
     return write(sockfd, data, len);
 }
 
-int IotoroConnectionLinux::doRead()
+int IotoroConnectionLinux::doRead(char* buff, const size_t len)
 {
-    char buf[1024];
-    bzero(buf, 1024);
-    read(sockfd, buf, 1024);
-    std::cout << buf << std::endl;
-    return 1;
+    return read(sockfd, buff, len);
 }
 
 IotoroConnectionLinux::IotoroConnectionLinux()
@@ -85,11 +81,6 @@ IotoroConnectionLinux::IotoroConnectionLinux()
 IotoroConnectionLinux iotoroLinuxCon;
 
 /* -- Client -- */
-
-IotoroClientLinux::IotoroClientLinux(const char* deviceId, const char* deviceKey)
-    : IotoroClient(deviceId, deviceKey, (IotoroConnection*) &iotoroLinuxCon)
-{}
-
 IotoroClientLinux::IotoroClientLinux(const char* deviceId, const char* deviceKey, 
                                      OPERATION_MODE mode)
     : IotoroClient(deviceId, deviceKey, (IotoroConnection*) &iotoroLinuxCon, mode)
