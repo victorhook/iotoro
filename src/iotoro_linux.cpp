@@ -66,7 +66,11 @@ int IotoroConnectionLinux::doWrite(const char* data, uint16_t len)
 
 int IotoroConnectionLinux::doRead(char* buff, const size_t len)
 {
-    return read(sockfd, buff, len);
+    size_t bytesRead = 0;
+    while (bytesRead < len && read(sockfd, buff + bytesRead, 1)) {
+        bytesRead++;
+    }
+    return bytesRead;
 }
 
 IotoroConnectionLinux::IotoroConnectionLinux()
