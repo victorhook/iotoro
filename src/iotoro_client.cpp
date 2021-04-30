@@ -121,8 +121,6 @@ void IotoroClient::setIotoroPacket(IOTORO_ACTION action, uint8_t iv[AES_IV_SIZE]
     iotoroPacket.deviceId = this->deviceId;
 }
 
-
-
 uint8_t IotoroClient::getPadBytesRequired()
 {
     // Headers + Payload + Device id needs to be encrypted.
@@ -216,7 +214,6 @@ void IotoroClient::debugPacket(const char* packet, const uint16_t packetSize)
 }
 
 
-
 int IotoroClient::send(IOTORO_ACTION action)
 {
     uint8_t iv[AES_BLOCKLEN];
@@ -235,6 +232,7 @@ int IotoroClient::send(IOTORO_ACTION action)
 
     connection->openConnection();
     connection->sendPacket(packet, packetSize);
+    recv();
     connection->closeConnection();
     return 1;
 }
@@ -243,7 +241,6 @@ int IotoroClient::sendParams()
 {
     return send(IOTORO_WRITE_UP);
 }
-
 
 size_t IotoroClient::fillBuffWithParams(char* buff)
 {
@@ -318,7 +315,6 @@ void IotoroClient::fillPacket(char* packet, const uint16_t packetSize)
 
 void IotoroClient::addPadBytes(char* payload, uint8_t padBytesRequired)
 {
-    printf("Need %d padbytes\n", padBytesRequired);
     memset(payload, padBytesRequired, padBytesRequired);
 }
 
@@ -328,26 +324,75 @@ void IotoroClient::encryptPayload(char* payload, size_t len)
     AES_init_ctx_iv(&aes, (const uint8_t *) deviceKey, (const uint8_t *) iotoroPacket.iv);
 
     // Encrypt the data.
-    printf("Encrypting from ");
-    asHex(payload, 1);
-    printf(" to ");
-    asHex(payload + len, 1);
-    printf("\n");
     AES_CBC_encrypt_buffer(&aes, (uint8_t *) payload, len);
 }
 
+int IotoroClient::getPayloadIndex(const char* buf, const size_t maxLen)
+{
+    // TODO: Handle incorrect formats.
+    const char *payloadIndex = strstr(buf, "\r\n\r\n");
+    size_t index = payloadIndex - buf;
+    return (index > maxLen || index < 0) ? -1 : index;
+}
+
+/* Currently only saves the http status code and nothing else from the header. */
+void IotoroClient::parseHttpHeaders(const char* data, const size_t maxLen)
+{
+    char* p = (char*) data;
+    string version, statusCode, statusWord;
+
+    while (*p != ' ') {       // Version
+        version.push_back(*p++);
+    }
+    p++;
+    while (*p != ' ') {      // StatusCode
+        statusCode.push_back(*p++);
+    }
+    p++;
+    while (*p != '\r') {      // StatusWord
+        statusWord.push_back(*p++);
+    }
+
+    int httpStatusCode = atoi(statusCode.c_str());
+    iotoroResponsePacket.httpStatus = httpStatusCode;
+}
 
 int IotoroClient::recv()
 {
     char buf[IOTORO_MAX_TCP_PACKET_READ_SIZE];
     int read = connection->readPacket(buf, IOTORO_MAX_TCP_PACKET_READ_SIZE);
-    printf("Read %d bytes\n", read);
+
+    parseHttpHeaders(buf, read);
+    int payloadIndex = getPayloadIndex(buf, read);
+
+    if (payloadIndex < 0) {
+        IOTORO_LOG_DEBUG("Failed to parse http headers!");
+        return -1;
+    }
+
+    decryptPacket(buf + payloadIndex);
+    encodePacket(buf + payloadIndex);
+
+
     return read;
 }
 
+void IotoroClient::encodePacket(char* buf)
+{
 
+}
 
+void IotoroClient::decryptPacket(char* buf)
+{
+    // Turn the data into a packet helper format.
 
+    // Create cypher from given iv and the device key.
+
+    // Decrypt the data.
+
+    // Unpad the data.
+
+}
 
 /* Set params. */
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], PARAM_TYPE type)
@@ -423,3 +468,4 @@ void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], double&
     params[paramsSet].paramPtr.d = &ptr;
     setParam(name, PARAM_DOBULE);
 }
+
