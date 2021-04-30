@@ -269,6 +269,11 @@ size_t IotoroClient::fillBuffWithParams(char* buff)
     return index;
 }
 
+bool IotoroClient::packetNeedsdParams()
+{
+    return iotoroPacket.action == IOTORO_WRITE_UP;
+}
+
 void IotoroClient::fillPacket(char* packet, const uint16_t packetSize) 
 { 
     memset(packet, 0, packetSize);
@@ -286,7 +291,8 @@ void IotoroClient::fillPacket(char* packet, const uint16_t packetSize)
     *(uint16_t* ) (packet + index) = iotoroPacket.dataSize;
     index += 2;
 
-    index += fillBuffWithParams(packet + index);
+    if (packetNeedsdParams())
+        index += fillBuffWithParams(packet + index);
 
     // Append the device id to the data.
     memcpy(packet + index, deviceId, IOTORO_DEVICE_ID_SIZE);
