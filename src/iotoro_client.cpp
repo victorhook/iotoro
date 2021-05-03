@@ -157,6 +157,11 @@ static void asHex(const char* buf, const uint16_t len)
     }
 }
 
+static inline int getPadBytes(const char* buf, const size_t packetLen)
+{
+    return buf[packetLen-1];
+}
+
 void IotoroClient::debugPacket(const char* packet, const uint16_t packetSize)
 {
     uint16_t index = _httpHeaderSize;
@@ -213,7 +218,6 @@ void IotoroClient::debugPacket(const char* packet, const uint16_t packetSize)
     printf("\n\n");
 
 }
-
 
 int IotoroClient::send(IOTORO_ACTION action)
 {
@@ -364,11 +368,6 @@ void IotoroClient::parseHttpHeaders(const char* data, const size_t maxLen)
     iotoroResponsePacket.httpStatus = httpStatusCode;
 }
 
-static inline int getPadBytes(const char* buf, const size_t packetLen)
-{
-    return buf[packetLen-1];
-}
-
 int IotoroClient::recv()
 {
     char buf[IOTORO_MAX_TCP_PACKET_READ_SIZE];
@@ -405,6 +404,13 @@ void IotoroClient::decodePayload(char* buf, const size_t len)
     char first = buf[0];
     iotoroPacket.version = (first & 0xf0) >> 4;
     iotoroPacket.action = (IOTORO_ACTION) (first & 0x0f);
+    iotoroPacket.dataSize = (buf[1] << 8) | buf[2];
+
+    int dataLength = len > IOTORO_MAX_PAYLOAD_SIZE 
+                     ? IOTORO_MAX_PAYLOAD_SIZE
+                     : len;
+    strncpy((char*) payloadBuf, buf, dataLength);
+    iotoroPacket.data = (uint8_t*) payloadBuf;
 }
 
 void IotoroClient::decryptPayload(char* buf, const size_t len, const uint8_t* iv)

@@ -151,7 +151,6 @@ class IotoroClient
         char* payloadBuf[IOTORO_MAX_PAYLOAD_SIZE];
         uint8_t paramsSet;
 
-
     private:
         // For authorization and encryption.
         uint8_t deviceId[IOTORO_DEVICE_ID_SIZE];
