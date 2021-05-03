@@ -4,7 +4,7 @@
 /* -- Client -- */
 IotoroClient::IotoroClient(const char* deviceId, const char* deviceKey, IotoroConnection* con,
                            OPERATION_MODE mode)
- : connection(con), deviceIdHexified(deviceId), mode(mode)
+ : connection(con), deviceIdHexified(deviceId), deviceKeyHexified(deviceKey), mode(mode)
 {
     unHexifly(deviceId, (char*) this->deviceId, IOTORO_DEVICE_ID_SIZE);
     unHexifly(deviceKey, (char*) this->deviceKey, IOTORO_DEVICE_KEY_SIZE);
