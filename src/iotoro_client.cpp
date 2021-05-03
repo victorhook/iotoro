@@ -310,8 +310,6 @@ void IotoroClient::fillPacket(char* packet, const uint16_t packetSize)
 
     printf("\nEfter encryption:\n");
 
-    //encryptPayload(packet, _httpHeaderSize, index, padBytesRequired);
-
     // Finally, add iv to the payload.
     memcpy(packet + index, iotoroPacket.iv, AES_IV_SIZE);
     index += AES_IV_SIZE;
@@ -337,7 +335,7 @@ int IotoroClient::getPayloadIndex(const char* buf, const size_t maxLen)
 {
     // TODO: Handle incorrect formats.
     const char *payloadIndex = strstr(buf, "\r\n\r\n");
-    size_t index = payloadIndex - buf;
+    size_t index = payloadIndex - buf + HTTP_ENDING_CR_BYTES;
     return (index > maxLen || index < 0) ? -1 : index;
 }
 
@@ -381,23 +379,30 @@ int IotoroClient::recv()
         return -1;
     }
 
-    decryptPacket(buf + payloadIndex);
-    encodePacket(buf + payloadIndex);
+    // Find the iv in the packet.
+    int ivIndex = read - AES_IV_SIZE;
+    fillPacketIv(buf + ivIndex, iotoroPacket.iv);
 
+    int payloadLength = read            // Total bytes read
+                        - payloadIndex  // Start of packet body
+                        - AES_IV_SIZE;  // Size of IV
+    
+    decryptPayload(buf + payloadIndex, payloadLength, iotoroPacket.iv);
+
+    // Last X bytes are always pad-bytes, since we're using AES.
+    payloadLength -= getPadBytes(buf, payloadLength);
+
+    decodePayload(buf + payloadIndex, payloadLength);
 
     return read;
 }
 
-void IotoroClient::encodePacket(char* buf)
+void IotoroClient::decodePayload(char* buf, const size_t len)
 {
-
+    char first = buf[0];
+    iotoroPacket.version = (first & 0xf0) >> 4;
+    iotoroPacket.action = (IOTORO_ACTION) (first & 0x0f);
 }
-
-void IotoroClient::decryptPacket(char* buf)
-{
-    // Turn the data into a packet helper format.
-
-    // Create cypher from given iv and the device key.
 
 void IotoroClient::decryptPayload(char* buf, const size_t len, const uint8_t* iv)
 {
@@ -413,6 +418,7 @@ void IotoroClient::fillPacketIv(const char* buf, uint8_t* iv)
     // The iv is the last AES_IV_SIZE bytes of the packet.
     strncpy((char*) iv, buf, AES_IV_SIZE);
 }
+
 
 /* Set params. */
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], PARAM_TYPE type)
