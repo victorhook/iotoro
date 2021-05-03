@@ -127,3 +127,24 @@ void putParamData(char* buff, const Param& param)
             break;
     }
 }
+
+void addHttpEnding(char* packet)
+{
+    packet[0] = '\r';
+    packet[1] = '\n';
+    packet[2] = '\r';
+    packet[3] = '\n';
+}
+
+void asHex(const char* buf, const uint16_t len)
+{
+    for (size_t i = 0; i < len; i++)
+    {
+        printf("%.2x ", buf[i] & 0xff);
+    }
+}
+
+int getPadBytes(const char* buf, const size_t packetLen)
+{
+    return buf[packetLen-1];
+}

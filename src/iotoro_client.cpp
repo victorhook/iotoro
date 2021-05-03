@@ -141,27 +141,6 @@ uint16_t IotoroClient::getTotalPacketSize()
             + HTTP_ENDING_CR_BYTES;
 }
 
-static inline void addHttpEnding(char* packet)
-{
-    packet[0] = '\r';
-    packet[1] = '\n';
-    packet[2] = '\r';
-    packet[3] = '\n';
-}
-
-static void asHex(const char* buf, const uint16_t len)
-{
-    for (size_t i = 0; i < len; i++)
-    {
-        printf("%.2x ", buf[i] & 0xff);
-    }
-}
-
-static inline int getPadBytes(const char* buf, const size_t packetLen)
-{
-    return buf[packetLen-1];
-}
-
 void IotoroClient::debugPacket(const char* packet, const uint16_t packetSize)
 {
     uint16_t index = _httpHeaderSize;

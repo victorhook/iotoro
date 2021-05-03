@@ -311,6 +311,15 @@ void hexifly(const char* from, char* to, size_t len);
 /* Performs md5sum of the given input. */
 void md5sum(const char* from, char to[16], size_t len);
 
+/* Append an HTTP ending to the packet. */
+void addHttpEnding(char* packet);
+
+/* Prints len bytes as hex. */
+void asHex(const char* buf, const uint16_t len);
+
+/* Returns the amount of padbytes in the incoming packet. */
+int getPadBytes(const char* buf, const size_t packetLen);
+
 /*  
     Returns the size of a parmeter type. 
     Note that these sizes are pre-decided, to ensure correct parsing
