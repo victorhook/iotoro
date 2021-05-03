@@ -408,6 +408,10 @@ void IotoroClient::decryptPayload(char* buf, const size_t len, const uint8_t* iv
     AES_CBC_decrypt_buffer(&aes, (uint8_t *) buf, len);
 }
 
+void IotoroClient::fillPacketIv(const char* buf, uint8_t* iv)
+{
+    // The iv is the last AES_IV_SIZE bytes of the packet.
+    strncpy((char*) iv, buf, AES_IV_SIZE);
 }
 
 /* Set params. */
