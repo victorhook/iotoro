@@ -10,6 +10,7 @@
 
 #include <iostream>
 #define IOTORO_LOG_DEBUG(msg) (std::cout << msg)
+#define IOTORO_LOG_ERROR(msg) (std::cout << msg)
 #define string std::string
 
 #ifndef TO_STRING
@@ -50,12 +51,16 @@ typedef enum {
 } OPERATION_MODE;
 
 typedef enum {
-    IOTORO_PING = 1,
-    IOTORO_WRITE_UP = 2,
-    IOTORO_WRITE_DOWN = 3,
-    IOTORO_PONG = 4,
-    IOTORO_READ_UP = 5,
-    IOTORO_READ_DOWN = 6
+    IOTORO_ACTION_PING,
+    IOTORO_ACTION_WRITE_UP,
+    IOTORO_ACTION_WRITE_UP_ACK,
+    IOTORO_ACTION_WRITE_DOWN,
+    IOTORO_ACTION_WRITE_DOWN_ACK,
+    IOTORO_ACTION_PONG,
+    IOTORO_ACTION_READ_UP,
+    IOTORO_ACTION_READ_UP_ACK,
+    IOTORO_ACTION_READ_DOWN,
+    IOTORO_ACTION_READ_DOWN_ACK,
 } IOTORO_ACTION;
     
 
@@ -219,11 +224,9 @@ class IotoroClient
             - Encrypt the payload
             - Send the data 
         */
-        int send(IOTORO_ACTION action);
+        int send(IOTORO_ACTION action, IOTORO_ACTION expected);
 
         int recv();
-
-        int sendParams();
 
         /* 
             Starts constant communication with the backend server.
@@ -235,8 +238,20 @@ class IotoroClient
         /* Stops the all connections to the server. */
         int stop();
 
+
+        // Messages
+
         /* Sends a ping message to the iotoro server. Returns -1 if error. */
         int ping();
+
+        /* Sends a packet with parameters to server. */
+        int sendParams();
+
+        /* Sends a packet to read paramters from server. */
+        int readParams();
+
+
+        // Getters & setters.
 
         /* Sets the frequency to write parameters upstream. In milliseconds */
         void setParamWriteFrequency(uint16_t frequency);
@@ -256,9 +271,9 @@ class IotoroClient
         /* Returns the operation mode. */
         OPERATION_MODE getOperationMode();
 
-        /* Param setters
-           The parameters can have multiple different types.
-        */
+
+        // Param setters
+        // The parameters can have multiple different types.
 
         /* Adds a paramter to the paramlist, that will be pushed upstream. */
         void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], bool& ptr);

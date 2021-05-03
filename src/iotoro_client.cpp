@@ -22,7 +22,17 @@ int IotoroClient::stop()
 
 int IotoroClient::ping()
 {
-    return 1;
+    return send(IOTORO_ACTION_PING, IOTORO_ACTION_PONG);
+}
+
+int IotoroClient::sendParams()
+{
+    return send(IOTORO_ACTION_WRITE_UP, IOTORO_ACTION_WRITE_UP_ACK);
+}
+
+int IotoroClient::readParams()
+{
+    return send(IOTORO_ACTION_READ_UP, IOTORO_ACTION_READ_UP_ACK);
 }
 
 
@@ -110,7 +120,7 @@ void IotoroClient::setIotoroPacket(IOTORO_ACTION action, uint8_t iv[AES_IV_SIZE]
     iotoroPacket.version = IOTORO_VERSION;
     iotoroPacket.action = action;
     switch (action) {
-        case IOTORO_WRITE_UP:
+        case IOTORO_ACTION_WRITE_UP:
             iotoroPacket.dataSize = getTotalParamsSize();
             iotoroPacket.data = (uint8_t *) payloadBuf;
             break;
@@ -198,11 +208,10 @@ void IotoroClient::debugPacket(const char* packet, const uint16_t packetSize)
 
 }
 
-int IotoroClient::send(IOTORO_ACTION action)
+int IotoroClient::send(IOTORO_ACTION action, IOTORO_ACTION expected)
 {
     uint8_t iv[AES_BLOCKLEN];
-    //generateIv(iv);
-    memset(iv, 0, 16);
+    generateIv(iv);
 
     setIotoroPacket(action, iv);
     setHttpHeaders();
@@ -218,12 +227,17 @@ int IotoroClient::send(IOTORO_ACTION action)
     connection->sendPacket(packet, packetSize);
     recv();
     connection->closeConnection();
-    return 1;
-}
 
-int IotoroClient::sendParams()
-{
-    return send(IOTORO_WRITE_UP);
+    if (iotoroPacket.action != expected) {
+        IOTORO_LOG_ERROR("Received incorrect action in packet!\nGot: ");
+        IOTORO_LOG_ERROR(iotoroPacket.action);
+        IOTORO_LOG_ERROR(" but expected ");
+        IOTORO_LOG_ERROR(expected);
+        IOTORO_LOG_ERROR("\n");
+        return -1;
+    }
+
+    return 1;
 }
 
 size_t IotoroClient::fillBuffWithParams(char* buff)
@@ -257,7 +271,7 @@ size_t IotoroClient::fillBuffWithParams(char* buff)
 
 bool IotoroClient::packetNeedsdParams()
 {
-    return iotoroPacket.action == IOTORO_WRITE_UP;
+    return iotoroPacket.action == IOTORO_ACTION_WRITE_UP;
 }
 
 void IotoroClient::fillPacket(char* packet, const uint16_t packetSize) 
