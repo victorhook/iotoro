@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include "aes.h"
 
 /* -- Platform specific -- */
 #define HEXIFLY_BIG_CHARS 1
@@ -19,7 +20,7 @@
 /* --- Constants --- */
 #define IOTORO_API_URL "localhost"
 #define IOTORO_API_PORT 8000
-
+ 
 #define IOTORO_API_METHOD "POST"
 #define IOTORO_API_ENDPOINT "/api/"
 #define IOTORO_PACKET_HEADER_SIZE 3
@@ -102,6 +103,12 @@ typedef struct
     uint8_t* iv;
 }  IotoroPacket; 
 
+typedef struct
+{
+    uint16_t httpStatus;
+    IotoroPacket* iotoroPacket;
+} IotoroResponsePacket;
+
 
 class IotoroConnection
 {
@@ -134,7 +141,6 @@ class IotoroConnection
         bool isConnected() { return _isConnected; }
 };
 
-#include "aes.h"
 
 class IotoroClient
 {
@@ -149,6 +155,7 @@ class IotoroClient
         uint8_t deviceId[IOTORO_DEVICE_ID_SIZE];
         uint8_t deviceKey[IOTORO_DEVICE_KEY_SIZE];
         const char* deviceIdHexified;
+        const char* deviceKeyHexified;
 
         // AES encryption.
         AES_ctx aes;
@@ -163,12 +170,23 @@ class IotoroClient
         uint16_t _httpHeaderSize;
 
         IotoroPacket iotoroPacket;
-
+        IotoroResponsePacket iotoroResponsePacket;
+ 
         // Setters & getters helper methods
         void setIotoroPacket(IOTORO_ACTION action, uint8_t iv[AES_IV_SIZE]);
         void setHttpHeaders();
         void setPayloadHeaders(IOTORO_ACTION action);
         void setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], PARAM_TYPE type);
+
+        /* Parses the headers of the http packet. */
+        void parseHttpHeaders(const char* data, const size_t maxLen);
+        /* Returns the index of where the payload starts in a http packet. 
+           Returns -1 if the payload is in incorrect http format. */
+        int getPayloadIndex(const char* data, const size_t maxLen);
+
+        void decryptPayload(char* buf, const size_t len, const uint8_t* iv);
+        void decodePayload(char* buf, const size_t len);
+        void fillPacketIv(const char* buf, uint8_t* iv);
 
         void debugPacket(const char* packet, const uint16_t packetSize);
 
@@ -178,6 +196,7 @@ class IotoroClient
         uint16_t getTotalParamsSize();
 
         size_t fillBuffWithParams(char* buff);
+        bool packetNeedsdParams();
         void fillPacket(char* buff, const uint16_t packetSize);
 
         // Encryption
