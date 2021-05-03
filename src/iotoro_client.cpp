@@ -363,6 +363,11 @@ void IotoroClient::parseHttpHeaders(const char* data, const size_t maxLen)
     iotoroResponsePacket.httpStatus = httpStatusCode;
 }
 
+static inline int getPadBytes(const char* buf, const size_t packetLen)
+{
+    return buf[packetLen-1];
+}
+
 int IotoroClient::recv()
 {
     char buf[IOTORO_MAX_TCP_PACKET_READ_SIZE];
@@ -394,9 +399,14 @@ void IotoroClient::decryptPacket(char* buf)
 
     // Create cypher from given iv and the device key.
 
-    // Decrypt the data.
+void IotoroClient::decryptPayload(char* buf, const size_t len, const uint8_t* iv)
+{
+    // Init the aes algorithm with the device key.
+    AES_init_ctx_iv(&aes, (const uint8_t *) deviceKey, iv);
 
-    // Unpad the data.
+    // Encrypt the data with the given iv.
+    AES_CBC_decrypt_buffer(&aes, (uint8_t *) buf, len);
+}
 
 }
 
