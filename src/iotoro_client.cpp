@@ -70,6 +70,7 @@ uint16_t IotoroClient::getPayloadSize()
 uint16_t IotoroClient::getTotalParamsSize()
 {
     uint16_t sum = 0;
+    Param* params = (Param*) payloadBuf;
     for (uint8_t i = 0; i < paramsSet; i++) {
         sum += getParamSettingSize(params[i]);
     }
@@ -111,7 +112,7 @@ void IotoroClient::setIotoroPacket(IOTORO_ACTION action, uint8_t iv[AES_IV_SIZE]
     switch (action) {
         case IOTORO_WRITE_UP:
             iotoroPacket.dataSize = getTotalParamsSize();
-            iotoroPacket.data = (uint8_t *) params;
+            iotoroPacket.data = (uint8_t *) payloadBuf;
             break;
         default:
             iotoroPacket.dataSize = 0;
@@ -250,8 +251,10 @@ size_t IotoroClient::fillBuffWithParams(char* buff)
         |  name | type |  value  |
     */
     size_t index = 0;
+    Param* paramPtr = (Param*) payloadBuf;
+
     for (uint8_t i = 0; i < paramsSet; i++) {
-        Param param = params[i];
+        Param param = paramPtr[i];
 
         // 0-9 - name
         for (char c: param.name) {
@@ -423,7 +426,7 @@ void IotoroClient::fillPacketIv(const char* buf, uint8_t* iv)
 /* Set params. */
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], PARAM_TYPE type)
 {
-    Param* param = &params[paramsSet];
+    Param* param = &((Param*) payloadBuf)[paramsSet];
     strcpy(param->name, name);
     param->type = type;
     paramsSet++;
@@ -431,67 +434,67 @@ void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], PARAM_T
 
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], bool& ptr)
 {
-    params[paramsSet].paramPtr.b = &ptr;
+    ((Param*) payloadBuf)[paramsSet].paramPtr.b = &ptr;
     setParam(name, PARAM_BOOL);
 }
 
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], uint8_t& ptr)
 {
-    params[paramsSet].paramPtr.u8 = &ptr;
+    ((Param*) payloadBuf)[paramsSet].paramPtr.u8 = &ptr;
     setParam(name, PARAM_UINT_8);
 }
 
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], int8_t& ptr)
 {
-    params[paramsSet].paramPtr.i8 = &ptr;
+    ((Param*) payloadBuf)[paramsSet].paramPtr.i8 = &ptr;
     setParam(name, PARAM_INT_8);
 }
 
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], uint16_t& ptr)
 {
-    params[paramsSet].paramPtr.u16 = &ptr;
+    ((Param*) payloadBuf)[paramsSet].paramPtr.u16 = &ptr;
     setParam(name, PARAM_UINT_16);
 }
 
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], int16_t& ptr)
 {
-    params[paramsSet].paramPtr.i16 = &ptr;
+    ((Param*) payloadBuf)[paramsSet].paramPtr.i16 = &ptr;
     setParam(name, PARAM_INT_16);
 }
 
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], uint32_t& ptr)
 {
-    params[paramsSet].paramPtr.u32 = &ptr;
+    ((Param*) payloadBuf)[paramsSet].paramPtr.u32 = &ptr;
     setParam(name, PARAM_UINT_32);
 }
 
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], int32_t& ptr)
 {
-    params[paramsSet].paramPtr.i32 = &ptr;
+    ((Param*) payloadBuf)[paramsSet].paramPtr.i32 = &ptr;
     setParam(name, PARAM_INT_32);
 }
 
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], uint64_t& ptr)
 {
-    params[paramsSet].paramPtr.u64 = &ptr;
+    ((Param*) payloadBuf)[paramsSet].paramPtr.u64 = &ptr;
     setParam(name, PARAM_UINT_64);
 }
 
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], int64_t& ptr)
 {
-    params[paramsSet].paramPtr.i64 = &ptr;
+    ((Param*) payloadBuf)[paramsSet].paramPtr.i64 = &ptr;
     setParam(name, PARAM_INT_64);
 }
 
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], float& ptr)
 {
-    params[paramsSet].paramPtr.f = &ptr;
+    ((Param*) payloadBuf)[paramsSet].paramPtr.f = &ptr;
     setParam(name, PARAM_FLOAT);
 }
 
 void IotoroClient::setParam(const char name[IOTORO_MAX_PARAM_NAME_SIZE], double& ptr)
 {
-    params[paramsSet].paramPtr.d = &ptr;
+    ((Param*) payloadBuf)[paramsSet].paramPtr.d = &ptr;
     setParam(name, PARAM_DOBULE);
 }
 

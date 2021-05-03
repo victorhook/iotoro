@@ -109,6 +109,8 @@ typedef struct
     IotoroPacket* iotoroPacket;
 } IotoroResponsePacket;
 
+constexpr uint16_t IOTORO_MAX_PAYLOAD_SIZE = IOTORO_MAX_PARAMETERS * sizeof(PARAM_TYPE);
+
 
 class IotoroConnection
 {
@@ -146,7 +148,7 @@ class IotoroClient
 {
     protected:
         IotoroConnection* connection;
-        Param params[IOTORO_MAX_PARAMETERS];
+        char* payloadBuf[IOTORO_MAX_PAYLOAD_SIZE];
         uint8_t paramsSet;
 
 
